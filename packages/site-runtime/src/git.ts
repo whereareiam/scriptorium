@@ -38,6 +38,7 @@ export function listGitRefs(projectRoot: string) {
     "for-each-ref",
     "--format=%(refname:short)|%(refname)|%(objectname)",
     "refs/heads",
+    "refs/remotes/origin",
     "refs/tags"
   ]);
 
@@ -45,16 +46,29 @@ export function listGitRefs(projectRoot: string) {
     return [];
   }
 
-  return output.split("\n").map((line) => {
-    const [name, fullName, objectName] = line.split("|");
+  const refs = new Map<string, GitRef>();
 
-    return {
+  for (const line of output.split("\n")) {
+    const [rawName, fullName, objectName] = line.split("|");
+    if (rawName === "origin/HEAD") continue;
+
+    const kind = fullName.startsWith("refs/tags/") ? "tag" : "branch";
+    const name = rawName.startsWith("origin/") ? rawName.slice("origin/".length) : rawName;
+
+    const existing = refs.get(name);
+    if (existing && existing.fullName.startsWith("refs/heads/")) {
+      continue;
+    }
+
+    refs.set(name, {
       name,
       fullName,
       objectName,
-      kind: fullName.startsWith("refs/tags/") ? "tag" : "branch"
-    } satisfies GitRef;
-  });
+      kind
+    });
+  }
+
+  return Array.from(refs.values());
 }
 
 export function filterPublishedRefs(refs: GitRef[], config: ScriptoriumProjectConfig) {

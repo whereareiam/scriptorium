@@ -110,7 +110,7 @@ async function ensureRepository(repoDir: string, repoUrl: string, defaultBranch:
     const repoStats = await stat(path.join(repoDir, ".git"));
     if (repoStats.isDirectory()) {
       await git(["remote", "set-url", "origin", remoteUrl], repoDir);
-      await git(["fetch", "--force", "origin", "+refs/heads/*:refs/heads/*", "+refs/tags/*:refs/tags/*"], repoDir);
+      await git(["fetch", "--force", "origin", "+refs/heads/*:refs/remotes/origin/*", "+refs/tags/*:refs/tags/*"], repoDir);
       await git(["checkout", "-f", defaultBranch], repoDir);
       await git(["clean", "-fd"], repoDir);
       await git(["reset", "--hard", `origin/${defaultBranch}`], repoDir);
@@ -122,8 +122,8 @@ async function ensureRepository(repoDir: string, repoUrl: string, defaultBranch:
 
   await rm(repoDir, { recursive: true, force: true });
   await mkdir(path.dirname(repoDir), { recursive: true });
-  await execFileAsync("git", ["clone", "--branch", defaultBranch, "--single-branch", remoteUrl, repoDir]);
-  await git(["fetch", "--force", "origin", "+refs/heads/*:refs/heads/*", "+refs/tags/*:refs/tags/*"], repoDir);
+  await execFileAsync("git", ["clone", "--branch", defaultBranch, remoteUrl, repoDir]);
+  await git(["fetch", "--force", "origin", "+refs/heads/*:refs/remotes/origin/*", "+refs/tags/*:refs/tags/*"], repoDir);
 }
 
 async function git(args: string[], cwd: string) {
