@@ -29,8 +29,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build runtime image assets
-        run: npm run build
+      - name: Build shared runtime
+        run: npm run build --workspace @scriptorium/site-runtime
+
+      - name: Build deployable docs app
+        env:
+          SCRIPTORIUM_REPO_URL: https://github.com/whereareiam/Identica.git
+          SCRIPTORIUM_DEFAULT_BRANCH: dev
+          SCRIPTORIUM_REFRESH_INTERVAL_SECONDS: "900"
+          SCRIPTORIUM_DATA_DIR: /tmp/scriptorium-runtime
+        run: npm run build:staged --workspace scriptorium-project-docs-template
 
       - name: Log in to registry
         env:
