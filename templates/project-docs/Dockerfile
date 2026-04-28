@@ -1,0 +1,14 @@
+FROM node:24-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+RUN apk add --no-cache git
+
+COPY .next/standalone ./
+COPY .next/static ./.next/static
+COPY .scriptorium ./.scriptorium
+
+EXPOSE 3000
+CMD ["node", "server.js"]

@@ -1,0 +1,40 @@
+{
+  "name": "@scriptorium/site-runtime",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "bin": {
+    "scriptorium-stage-refs": "./dist/cli/stage-refs.js"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts src/cli/stage-refs.ts --format esm --dts --clean",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@fumadocs/local-md": "^0.2.1",
+    "fumadocs-core": "^16.8.5",
+    "lucide-react": "^1.12.0",
+    "semver": "^7.7.4",
+    "zod": "^4.3.6"
+  },
+  "peerDependencies": {
+    "next": "^16.2.4",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14"
+  }
+}
