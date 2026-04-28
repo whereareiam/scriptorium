@@ -8,7 +8,6 @@ RUN apk add --no-cache git
 
 COPY .next/standalone ./
 COPY .next/static ./.next/static
-COPY .scriptorium ./.scriptorium
 
 EXPOSE 3000
 CMD ["node", "server.js"]
