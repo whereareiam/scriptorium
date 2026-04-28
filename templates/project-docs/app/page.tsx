@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
-import { getProjectConfig, toRefSlug } from "@scriptorium/site-runtime";
+import { getProjectConfig, getRefUrl, getSource } from "@scriptorium/site-runtime";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const config = await getProjectConfig();
-  redirect(`/docs/${toRefSlug(config.defaultRef)}`);
+  const { source } = await getSource();
+  redirect(getRefUrl(source, config.defaultRef));
 }
