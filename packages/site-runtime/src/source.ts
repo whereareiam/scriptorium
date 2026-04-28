@@ -5,9 +5,9 @@ import { localMd, type LocalMarkdownPage } from "@fumadocs/local-md";
 import { loader, type MetaData, type StaticSource, type VirtualFile } from "fumadocs-core/source";
 import type { Root as PageTreeRoot, Folder as PageTreeFolder } from "fumadocs-core/page-tree";
 import { lucideIconsPlugin } from "fumadocs-core/source/lucide-icons";
-import { getRefMetadata, type ScriptoriumProjectConfig } from "./config";
+import { getRefMetadata, loadProjectConfig, type ScriptoriumProjectConfig } from "./config";
 import { ensureRuntimeSnapshot, getRuntimePaths } from "./runtime-sync";
-import { readStageManifest } from "./staging";
+import { readStageManifest, type StageManifest } from "./staging";
 
 type CombinedPageData = LocalMarkdownPage<Record<string, unknown>, Record<string, unknown>>;
 type CombinedMetaData = MetaData;
@@ -26,7 +26,11 @@ export const getStagedSite = cache(async (projectRoot = process.cwd()) => {
     return readStageManifest(process.cwd(), getRuntimePaths().stagedDir);
   }
 
-  return readStageManifest(projectRoot);
+  try {
+    return await readStageManifest(projectRoot);
+  } catch {
+    return createFallbackManifest(projectRoot);
+  }
 });
 
 export const getProjectConfig = cache(async (projectRoot = process.cwd()) => {
@@ -121,4 +125,16 @@ function findRefFolder(tree: PageTreeRoot, refSlug: string) {
   return tree.children.find((node): node is PageTreeFolder => {
     return node.type === "folder" && node.$ref === `${refSlug}/meta.json`;
   });
+}
+
+async function createFallbackManifest(projectRoot: string): Promise<StageManifest> {
+  const project = await loadProjectConfig(projectRoot);
+
+  return {
+    generatedAt: new Date(0).toISOString(),
+    projectRoot,
+    repoRoot: projectRoot,
+    project,
+    refs: []
+  };
 }
