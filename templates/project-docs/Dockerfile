@@ -6,7 +6,8 @@ ENV HOSTNAME=0.0.0.0
 
 RUN apk add --no-cache git
 
-COPY .next/standalone ./
+COPY .next/standalone/node_modules ./node_modules
+COPY .next/standalone/templates/project-docs ./
 COPY .next/static ./.next/static
 
 EXPOSE 3000
