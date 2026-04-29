@@ -6,10 +6,10 @@ ENV HOSTNAME=0.0.0.0
 
 RUN apk add --no-cache git
 
-COPY .next/standalone/node_modules ./node_modules
-COPY .next/standalone/templates/project-docs ./
-COPY .next/node_modules ./.next/node_modules
-COPY .next/static ./.next/static
+COPY templates/project-docs/.next/standalone/node_modules ./node_modules
+COPY templates/project-docs/.next/standalone/templates/project-docs ./
+COPY templates/project-docs/.next/node_modules ./.next/node_modules
+COPY templates/project-docs/.next/static ./.next/static
 RUN if [ -d .next/node_modules ]; then \
       find .next/node_modules -maxdepth 1 -type l | while read -r link; do \
         target_name="$(basename "$(readlink "$link")")"; \

@@ -49,3 +49,4 @@ Useful variants:
 
 - `npm run dev:runtime`: rebuild the shared runtime package
 - `npm run dev:example`: run the starter example directly
+- `npm run build`: build the shared runtime and the deployable docs app

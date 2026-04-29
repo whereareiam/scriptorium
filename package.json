@@ -10,7 +10,7 @@
     "dev": "npm run build --workspace @scriptorium/site-runtime && npm run dev --workspace scriptorium-project-docs-template",
     "dev:runtime": "npm run build --workspace @scriptorium/site-runtime",
     "dev:example": "npm run dev --workspace scriptorium-project-docs-template",
-    "build": "npm run build --workspace @scriptorium/site-runtime",
+    "build": "npm run build --workspace @scriptorium/site-runtime && npm run build:staged --workspace scriptorium-project-docs-template",
     "build:example": "npm run build --workspace @scriptorium/site-runtime && npm run build --workspace scriptorium-project-docs-template",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspace @scriptorium/site-runtime",
