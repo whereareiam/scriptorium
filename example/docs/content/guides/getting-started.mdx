@@ -1,0 +1,21 @@
+---
+title: Getting Started
+description: Bundle refs from your project repository into one docs site.
+---
+
+# Getting Started
+
+1. Add your docs under `docs/content`.
+2. Add branding assets under `docs/assets`.
+3. Fill in `scriptorium.project.json`.
+4. Run the ref staging step before building.
+
+## Notes
+
+Use absolute `/assets/...` paths when you want stable branding or image URLs across all published refs.
+
+## Ref Metadata
+
+Use the `refs` object in `scriptorium.project.json` to give branches or tags friendly names and short descriptions in the selector UI.
+
+The example fixture is configured with `dev` as the default ref and will pick up matching `release/*` branches and tags from the repository when they exist.

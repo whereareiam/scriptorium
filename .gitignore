@@ -6,4 +6,4 @@ coverage
 .scriptorium
 .turbo
 *.log
-
+*.tsbuildinfo

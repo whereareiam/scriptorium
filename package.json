@@ -2,24 +2,35 @@
   "name": "scriptorium",
   "version": "0.1.0",
   "private": true,
-  "workspaces": [
-    "packages/*",
-    "templates/*"
-  ],
   "scripts": {
-    "dev": "npm run build --workspace @scriptorium/site-runtime && npm run dev --workspace scriptorium-project-docs-template",
-    "dev:runtime": "npm run build --workspace @scriptorium/site-runtime",
-    "dev:example": "npm run dev --workspace scriptorium-project-docs-template",
-    "build": "npm run build --workspace @scriptorium/site-runtime && npm run build:staged --workspace scriptorium-project-docs-template",
-    "build:example": "npm run build --workspace @scriptorium/site-runtime && npm run build --workspace scriptorium-project-docs-template",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspace @scriptorium/site-runtime",
-    "validate": "npm run typecheck && npm run test && npm run build"
+    "dev": "npm run dev:local",
+    "dev:local": "tsx src/cli/prepare-site.ts && next dev",
+    "dev:built": "next start",
+    "build": "tsx src/cli/prepare-site.ts && next build",
+    "typecheck": "next typegen && tsc --noEmit",
+    "validate": "npm run typecheck && npm run test && npm run build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fumadocs/local-md": "^0.2.1",
+    "fumadocs-core": "^16.8.5",
+    "fumadocs-ui": "^16.8.5",
+    "lucide-react": "^1.12.0",
+    "next": "^16.2.4",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "semver": "^7.7.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.4",
+    "@types/mdx": "^2.0.13",
     "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@types/semver": "^7.7.1",
-    "tsup": "^8.5.1",
+    "postcss": "^8.5.12",
+    "tailwindcss": "^4.2.4",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5"

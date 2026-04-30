@@ -1,0 +1,33 @@
+{
+  "name": "Scriptorium Starter",
+  "description": "Shared docs shell.",
+  "logo": "docs/assets/logo.svg",
+  "defaultRef": "dev",
+  "refRules": {
+    "defaultBranch": "dev",
+    "releaseBranchPrefix": "release/",
+    "includeDefaultRef": true,
+    "includeReleaseBranches": true,
+    "includeTags": true,
+    "extraRefs": []
+  },
+  "refs": {
+    "dev": {
+      "label": "Development",
+      "description": "Default local-development branch for the example fixture.",
+      "theme": {
+        "primary": "hsl(217 100% 64%)",
+        "primaryForeground": "hsl(0 0% 7%)",
+        "ring": "hsl(217 100% 64%)",
+        "accent": "hsla(217 100% 64% / 0.14)",
+        "accentForeground": "hsl(217 100% 86%)"
+      }
+    }
+  },
+  "links": [
+    {
+      "label": "Repository",
+      "url": "https://github.com/example/project"
+    }
+  ]
+}
