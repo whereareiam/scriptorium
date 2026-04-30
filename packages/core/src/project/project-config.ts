@@ -49,6 +49,7 @@ export const projectConfigSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1).optional(),
   logo: z.string().min(1),
+  favicon: z.string().min(1).optional(),
   urls: projectUrlsSchema,
   versions: publishedVersionsSchema
 });
