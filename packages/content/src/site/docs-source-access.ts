@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { localMd, type LocalMarkdownPage } from "@fumadocs/local-md";
-import { loader, type MetaData, type StaticSource, type VirtualFile } from "fumadocs-core/source";
+import { loader, type LoaderPlugin, type MetaData, type StaticSource, type VirtualFile } from "fumadocs-core/source";
 import { lucideIconsPlugin } from "fumadocs-core/source/lucide-icons";
 import { getRefMetadata, toRefSlug, type ScriptoriumProjectConfig } from "@scriptorium/core";
 import type { BundleManifest } from "@scriptorium/bundle";
@@ -31,7 +31,10 @@ export function createDocsSourceAccess(getBundledSite: (projectRoot?: string) =>
 
     const source = loader({ files }, {
       baseUrl: "/docs",
-      plugins: [lucideIconsPlugin()]
+      plugins: [
+        lucideIconsPlugin(),
+        disableLeafFolderCollapsingPlugin()
+      ]
     });
 
     return { source };
@@ -43,6 +46,24 @@ export function createDocsSourceAccess(getBundledSite: (projectRoot?: string) =>
 }
 
 export type DocsSource = Awaited<ReturnType<ReturnType<typeof createDocsSourceAccess>["getSource"]>>["source"];
+
+function disableLeafFolderCollapsingPlugin(): LoaderPlugin {
+  return {
+    name: "scriptorium:disable-leaf-folder-collapsing",
+    transformPageTree: {
+      folder(node) {
+        if (node.index && node.children.length === 0 && node.collapsible === undefined) {
+          return {
+            ...node,
+            collapsible: false
+          };
+        }
+
+        return node;
+      }
+    }
+  };
+}
 
 function prefixRefFiles(source: CombinedSource, project: ScriptoriumProjectConfig, refName: string) {
   const refSlug = toRefSlug(refName);

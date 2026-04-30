@@ -152,6 +152,52 @@ describe("buildProjectBundle", () => {
     ]);
   });
 
+  it("makes index-only folders non-collapsible in the sidebar tree", async () => {
+    const { projectRoot } = await createFixtureRepo();
+
+    await mkdir(path.join(projectRoot, "docs", "content", "installation", "normal"), { recursive: true });
+    await writeJson(path.join(projectRoot, "docs", "content", "meta.json"), {
+      title: "Docs",
+      pages: ["index", "guides", "installation"]
+    });
+    await writeJson(path.join(projectRoot, "docs", "content", "installation", "meta.json"), {
+      title: "Installation",
+      pages: ["index", "normal"]
+    });
+    await writeFile(
+      path.join(projectRoot, "docs", "content", "installation", "index.mdx"),
+      "---\ntitle: Installation\ndescription: Install overview\n---\n\n# Installation\n"
+    );
+    await writeFile(
+      path.join(projectRoot, "docs", "content", "installation", "normal", "index.mdx"),
+      "---\ntitle: Normal Installation\ndescription: Standard install\n---\n\n# Normal Installation\n"
+    );
+
+    await buildProjectBundle({
+      projectRoot,
+      repository: createGitCliStageRepository(projectRoot)
+    });
+
+    const { getSource } = createDocsSourceAccess((root = projectRoot) => readBundleManifest(root));
+    const { source } = await getSource(projectRoot);
+    const pageTree = source.getPageTree();
+    const devRoot = pageTree.children.find((node) => node.type === "folder" && node.name === "Development");
+
+    expect(devRoot).toBeDefined();
+
+    const installation = devRoot?.type === "folder"
+      ? devRoot.children.find((node) => node.type === "folder" && node.name === "Installation")
+      : undefined;
+    const normal = installation?.type === "folder"
+      ? installation.children.find((node) => node.type === "folder" && node.name === "Normal Installation")
+      : undefined;
+
+    expect(normal?.type).toBe("folder");
+    expect(normal?.index?.url).toBe("/docs/dev/installation/normal");
+    expect(normal?.children).toEqual([]);
+    expect(normal?.collapsible).toBe(false);
+  });
+
   it("supports staging through the isomorphic git repository adapter", async () => {
     const { projectRoot, repoRoot } = await createFixtureRepo();
     const manifest = await buildProjectBundle({
