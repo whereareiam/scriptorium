@@ -48,8 +48,6 @@ const runtimeConfigSchema = z.object({
 
 export type RuntimeConfig = z.infer<typeof runtimeConfigSchema>;
 
-const runtimeConfigPath = path.resolve(process.cwd(), "scriptorium.json");
-
 export function getRuntimeConfig() {
   return runtimeConfigSchema.parse(readRuntimeConfigFile());
 }
@@ -64,6 +62,7 @@ export function getLocalProjectRoot() {
 }
 
 function readRuntimeConfigFile() {
+  const runtimeConfigPath = path.resolve(process.cwd(), "scriptorium.json");
   if (!existsSync(runtimeConfigPath)) {
     return {};
   }

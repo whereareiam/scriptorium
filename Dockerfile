@@ -7,14 +7,16 @@ ENV HOSTNAME=0.0.0.0
 
 USER root
 
-COPY app/.next/standalone ./
-COPY app/.next/static ./app/.next/static
+COPY app/.next/standalone/app ./
+COPY app/.next/standalone/node_modules ./node_modules
+COPY app/.next/standalone/example /example
+COPY app/.next/static ./.next/static
 COPY docker ./docker
 RUN mkdir -p /data/scriptorium \
   && chmod +x ./docker/entrypoint.sh \
-  && chown -R bun:bun /app /data
+  && chown -R bun:bun /app /data /example
 
 EXPOSE 3000
 USER bun
 ENTRYPOINT ["./docker/entrypoint.sh"]
-CMD ["bun", "app/server.js"]
+CMD ["bun", "server.js"]
