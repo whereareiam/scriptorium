@@ -13,6 +13,20 @@ COPY app/.next/standalone/example /example
 COPY app/.next/static ./.next/static
 COPY docker ./docker
 RUN mkdir -p /data/scriptorium \
+  && if [ -d /app/.next/node_modules ]; then \
+      for alias in /app/.next/node_modules/*; do \
+        if [ -L "$alias" ]; then \
+          target="$(readlink "$alias")"; \
+          case "$target" in \
+            ../../../node_modules/*) \
+              package_target="${target#../../../node_modules/}"; \
+              ln -snf "../../node_modules/$package_target" "$alias"; \
+              ln -snf "$package_target" "/app/node_modules/$(basename "$alias")"; \
+              ;; \
+          esac; \
+        fi; \
+      done; \
+    fi \
   && chmod +x ./docker/entrypoint.sh \
   && chown -R bun:bun /app /data /example
 
