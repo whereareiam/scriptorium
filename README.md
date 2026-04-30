@@ -41,15 +41,15 @@ and fetches content from the consumer repo at runtime.
 Run the Scriptorium app against the local example fixture:
 
 ```bash
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 Production-like local preview of the built app:
 
 ```bash
-npm run build
-npm run dev:built
+bun run build
+bun run dev:built
 ```
 
 The local example lives in `example/` and mirrors the consumer contract:
@@ -61,5 +61,5 @@ The local example lives in `example/` and mirrors the consumer contract:
 Build the deployable app with:
 
 ```bash
-npm run build
+bun run build
 ```

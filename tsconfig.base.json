@@ -18,6 +18,7 @@
     "jsx": "preserve",
     "skipLibCheck": true,
     "types": [
+      "bun",
       "node"
     ]
   }

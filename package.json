@@ -2,14 +2,15 @@
   "name": "scriptorium",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "bun@1.3.13",
   "scripts": {
-    "dev": "npm run dev:local",
-    "dev:local": "tsx src/cli/prepare-site.ts && next dev",
-    "dev:built": "next start",
-    "build": "tsx src/cli/prepare-site.ts && next build",
+    "dev": "bun src/cli/prepare-site.ts && next dev",
+    "dev:local": "bun src/cli/prepare-site.ts && next dev",
+    "dev:built": "bun .next/standalone/server.js",
+    "build": "bun src/cli/prepare-site.ts && next build",
     "typecheck": "next typegen && tsc --noEmit",
-    "validate": "npm run typecheck && npm run test && npm run build",
-    "test": "vitest run"
+    "validate": "next typegen && tsc --noEmit && bun test && bun src/cli/prepare-site.ts && next build",
+    "test": "bun test"
   },
   "dependencies": {
     "@fumadocs/local-md": "^0.2.1",
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.4",
+    "@types/bun": "^1.3.2",
     "@types/mdx": "^2.0.13",
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
@@ -31,8 +33,6 @@
     "@types/semver": "^7.7.1",
     "postcss": "^8.5.12",
     "tailwindcss": "^4.2.4",
-    "tsx": "^4.21.0",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.5"
+    "typescript": "^6.0.3"
   }
 }

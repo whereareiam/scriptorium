@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { filterPublishedRefs, type GitRef } from "./git";
 import type { ScriptoriumProjectConfig } from "./config";
 
