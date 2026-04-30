@@ -65,8 +65,17 @@ const handleWebhookTrigger = createWebhookTriggerHandler({
   getSecret: () => getRuntimeConfig().triggers?.webhook?.secret
 });
 
+async function ensureRuntimeReady() {
+  if (isRuntimeBundleEnabled()) {
+    await runtimeSnapshotController.ensureRuntimeSnapshot();
+  }
+
+  await docsSourceAccess.getSource();
+}
+
 export { buildWorkspaceThemeStylesheet, getRefMetadata, getRefUrl, handleWebhookTrigger, readCurrentAsset };
 export const { ensureRuntimeSnapshot, refreshRuntimeSnapshot } = runtimeSnapshotController;
+export { ensureRuntimeReady };
 export const { getBundledSite, getProjectConfig, getPublishedVersions } = bundledSiteAccess;
 export const { getSource } = docsSourceAccess;
 export { getLocalProjectRoot, getRuntimeConfig, getRuntimePaths };
