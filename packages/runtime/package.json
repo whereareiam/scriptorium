@@ -1,0 +1,11 @@
+{
+  "name": "@scriptorium/runtime",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@scriptorium/bundle": "workspace:*",
+    "@scriptorium/core": "workspace:*"
+  }
+}

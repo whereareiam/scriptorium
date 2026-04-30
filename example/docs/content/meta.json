@@ -2,7 +2,7 @@
   "title": "Docs",
   "pages": [
     "index",
-    "guides"
+    "guides",
+    "components"
   ]
 }
-

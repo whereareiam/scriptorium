@@ -1,0 +1,11 @@
+{
+  "name": "@scriptorium/source-git",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@scriptorium/core": "workspace:*",
+    "isomorphic-git": "^1.37.6"
+  }
+}

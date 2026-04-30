@@ -6,13 +6,13 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
 USER root
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends git \
-    && rm -rf /var/lib/apt/lists/*
 
-COPY .next/standalone ./
-COPY .next/static ./.next/static
+COPY app/.next/standalone ./
+COPY app/.next/static ./app/.next/static
+COPY docker ./docker
+RUN chmod +x ./docker/entrypoint.sh
 
 EXPOSE 3000
 USER bun
-CMD ["bun", "server.js"]
+ENTRYPOINT ["./docker/entrypoint.sh"]
+CMD ["bun", "app/server.js"]

@@ -1,0 +1,44 @@
+---
+title: Content Tabs
+description: Docs-style tab content for switching between sections on the same page.
+---
+
+# Content Tabs
+
+`ContentTabs` and `ContentTab` are the custom Scriptorium tabs for switching larger docs sections without leaving the current page.
+
+## Example
+
+<ContentTabs items={['Getting Started', 'Configuration']}>
+  <ContentTab value="Getting Started">
+    Scriptorium can publish one shared documentation site for multiple refs of the same project.
+
+    Use this when you want readers to:
+
+    - start on a stable overview page
+    - switch between published versions
+    - read guides without leaving the current page
+  </ContentTab>
+  <ContentTab value="Configuration">
+    Each source repository should provide a small project config and a docs folder structure.
+
+    Required pieces:
+
+    - `scriptorium.project.json`
+    - `docs/content/**`
+    - `docs/assets/**`
+  </ContentTab>
+</ContentTabs>
+
+## Usage
+
+```mdx
+<ContentTabs items={['Getting Started', 'Configuration']}>
+  <ContentTab value="Getting Started">
+    Content for the first tab.
+  </ContentTab>
+  <ContentTab value="Configuration">
+    Content for the second tab.
+  </ContentTab>
+</ContentTabs>
+```

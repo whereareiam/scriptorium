@@ -1,0 +1,73 @@
+import { cache } from "react";
+import { localMd, type LocalMarkdownPage } from "@fumadocs/local-md";
+import { loader, type MetaData, type StaticSource, type VirtualFile } from "fumadocs-core/source";
+import { lucideIconsPlugin } from "fumadocs-core/source/lucide-icons";
+import { getRefMetadata, toRefSlug, type ScriptoriumProjectConfig } from "@scriptorium/core";
+import type { BundleManifest } from "@scriptorium/bundle";
+
+type CombinedPageData = LocalMarkdownPage<Record<string, unknown>, Record<string, unknown>>;
+type CombinedMetaData = MetaData;
+type CombinedSource = StaticSource<{
+  pageData: CombinedPageData;
+  metaData: CombinedMetaData;
+}>;
+type CombinedVirtualFile = VirtualFile<{
+  pageData: CombinedPageData;
+  metaData: CombinedMetaData;
+}>;
+
+export function createDocsSourceAccess(getBundledSite: (projectRoot?: string) => Promise<BundleManifest>) {
+  const getSource = cache(async (projectRoot?: string) => {
+    const bundle = await getBundledSite(projectRoot);
+    const files: CombinedVirtualFile[] = [];
+
+    for (const version of bundle.versions) {
+      const docs = localMd({
+        dir: version.contentDir
+      });
+      const staticSource = await docs.staticSource();
+      files.push(...prefixRefFiles(staticSource, bundle.project, version.name));
+    }
+
+    const source = loader({ files }, {
+      baseUrl: "/docs",
+      plugins: [lucideIconsPlugin()]
+    });
+
+    return { source };
+  });
+
+  return {
+    getSource
+  };
+}
+
+export type DocsSource = Awaited<ReturnType<ReturnType<typeof createDocsSourceAccess>["getSource"]>>["source"];
+
+function prefixRefFiles(source: CombinedSource, project: ScriptoriumProjectConfig, refName: string) {
+  const refSlug = toRefSlug(refName);
+  const refLabel = getRefMetadata(project, refName).label;
+
+  return source.files.map((file) => prefixRefFile(file, refSlug, refLabel));
+}
+
+function prefixRefFile(file: CombinedVirtualFile, refSlug: string, refLabel: string): CombinedVirtualFile {
+  if (file.type === "meta" && file.path === "meta.json") {
+    const { description: _description, ...restData } = file.data;
+
+    return {
+      ...file,
+      path: `${refSlug}/meta.json`,
+      data: {
+        ...restData,
+        title: refLabel,
+        root: true
+      }
+    };
+  }
+
+  return {
+    ...file,
+    path: `${refSlug}/${file.path}`
+  };
+}

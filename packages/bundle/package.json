@@ -1,0 +1,10 @@
+{
+  "name": "@scriptorium/bundle",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@scriptorium/core": "workspace:*"
+  }
+}

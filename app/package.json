@@ -1,0 +1,32 @@
+{
+  "name": "@scriptorium/web",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "typecheck": "next typegen && tsc --noEmit",
+    "dev:built": "bun .next/standalone/app/server.js"
+  },
+  "dependencies": {
+    "@scriptorium/content": "workspace:*",
+    "@scriptorium/core": "workspace:*",
+    "@scriptorium/bundle": "workspace:*",
+    "@scriptorium/source-git": "workspace:*",
+    "@scriptorium/trigger": "workspace:*",
+    "@scriptorium/trigger-webhook": "workspace:*",
+    "@scriptorium/runtime": "workspace:*",
+    "@scriptorium/ui": "workspace:*",
+    "fumadocs-ui": "^16.8.5",
+    "next": "^16.2.4",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.4",
+    "@types/mdx": "^2.0.13",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "postcss": "^8.5.12",
+    "tailwindcss": "^4.2.4"
+  }
+}

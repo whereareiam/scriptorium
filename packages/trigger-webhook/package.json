@@ -1,0 +1,10 @@
+{
+  "name": "@scriptorium/trigger-webhook",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@scriptorium/trigger": "workspace:*"
+  }
+}
