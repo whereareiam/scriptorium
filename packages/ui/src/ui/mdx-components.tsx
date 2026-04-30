@@ -1,10 +1,11 @@
-import type { FC } from "react";
-import type { MDXComponents } from "mdx/types";
+import type {FC} from "react";
+import type {MDXComponents} from "mdx/types";
 import * as Accordions from "fumadocs-ui/components/accordion";
 import * as Tabs from "fumadocs-ui/components/tabs";
 import * as Icons from "lucide-react";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import * as ContentTabs from "./content-tabs";
+import * as Badge from "./badge";
 
 export function getMDXComponents(components?: MDXComponents) {
   return {
@@ -13,6 +14,7 @@ export function getMDXComponents(components?: MDXComponents) {
     ...Accordions,
     ...ContentTabs,
     ...Tabs,
+    ...Badge,
     ...components
   } satisfies MDXComponents;
 }
