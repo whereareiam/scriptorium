@@ -7,3 +7,7 @@ export {
   type BadgeType,
   Badge
 } from "./ui/badge";
+export {
+  type MavenVersionLinkProps,
+  MavenVersionLink
+} from "./ui/maven-version-link";

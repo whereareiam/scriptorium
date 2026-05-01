@@ -6,6 +6,7 @@ import * as Icons from "lucide-react";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import * as ContentTabs from "./content-tabs";
 import * as Badge from "./badge";
+import * as MavenVersionLink from "./maven-version-link";
 
 export function getMDXComponents(components?: MDXComponents) {
   return {
@@ -15,6 +16,7 @@ export function getMDXComponents(components?: MDXComponents) {
     ...ContentTabs,
     ...Tabs,
     ...Badge,
+    ...MavenVersionLink,
     ...components
   } satisfies MDXComponents;
 }
