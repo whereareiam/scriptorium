@@ -28,6 +28,7 @@
         "@scriptorium/core": "workspace:*",
         "@scriptorium/runtime": "workspace:*",
         "@scriptorium/source-git": "workspace:*",
+        "@scriptorium/source-local": "workspace:*",
         "@scriptorium/trigger": "workspace:*",
         "@scriptorium/trigger-webhook": "workspace:*",
         "@scriptorium/ui": "workspace:*",
@@ -49,6 +50,7 @@
       "name": "@scriptorium/bundle",
       "dependencies": {
         "@scriptorium/core": "workspace:*",
+        "@scriptorium/source-local": "workspace:*",
       },
     },
     "packages/content": {
@@ -81,6 +83,13 @@
       "dependencies": {
         "@scriptorium/core": "workspace:*",
         "isomorphic-git": "^1.37.6",
+      },
+    },
+    "packages/source-local": {
+      "name": "@scriptorium/source-local",
+      "dependencies": {
+        "@scriptorium/core": "workspace:*",
+        "@scriptorium/source-git": "workspace:*",
       },
     },
     "packages/trigger": {
@@ -280,6 +289,8 @@
     "@scriptorium/runtime": ["@scriptorium/runtime@workspace:packages/runtime"],
 
     "@scriptorium/source-git": ["@scriptorium/source-git@workspace:packages/source-git"],
+
+    "@scriptorium/source-local": ["@scriptorium/source-local@workspace:packages/source-local"],
 
     "@scriptorium/trigger": ["@scriptorium/trigger@workspace:packages/trigger"],
 

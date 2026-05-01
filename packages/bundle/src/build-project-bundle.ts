@@ -1,10 +1,9 @@
-import { cp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   assertProjectStructure,
   filterPublishedRefs,
-  loadProjectConfig,
-  resolveProjectPaths
+  loadProjectConfig
 } from "@scriptorium/core";
 import { copyCurrentAssets } from "./export/current-assets";
 import { exportVersion } from "./export/export-version";
@@ -16,7 +15,6 @@ import type { BundledVersion } from "./models/bundled-version";
 const bundleLocks = new Map<string, Promise<BundleManifest>>();
 
 async function buildWorkingTreeVersions(projectRoot: string, outputDir: string, project: Awaited<ReturnType<typeof loadProjectConfig>>) {
-  const { configPath, docsAssetsDir, docsContentDir } = resolveProjectPaths(projectRoot);
   const refNames = new Set<string>([
     project.versions.home,
     ...project.versions.include.flatMap((rule) => ("name" in rule ? [rule.name] : [])),
@@ -26,28 +24,7 @@ async function buildWorkingTreeVersions(projectRoot: string, outputDir: string, 
   const bundledVersions: BundledVersion[] = [];
 
   for (const refName of refNames) {
-    const versionRoot = path.join(outputDir, "versions", refName);
-
-    await mkdir(versionRoot, { recursive: true });
-    await cp(docsContentDir, path.join(versionRoot, "content"), { recursive: true });
-
-    try {
-      await cp(docsAssetsDir, path.join(versionRoot, "assets"), { recursive: true });
-    } catch {
-      await mkdir(path.join(versionRoot, "assets"), { recursive: true });
-    }
-
-    await cp(configPath, path.join(versionRoot, "scriptorium.project.json"));
-
-    bundledVersions.push({
-      name: refName,
-      kind: "branch",
-      fullName: `working-tree/${refName}`,
-      objectName: "working-tree",
-      contentDir: path.join(versionRoot, "content"),
-      assetsDir: path.join(versionRoot, "assets"),
-      configPath: path.join(versionRoot, "scriptorium.project.json")
-    });
+    bundledVersions.push(await exportWorkingTreeVersion(projectRoot, refName, outputDir));
   }
 
   return bundledVersions;
@@ -85,9 +62,10 @@ export async function buildProjectBundle(options: BuildProjectBundleOptions) {
       for (const ref of refs) {
         if (worktreeDirty && ref.kind === "branch" && ref.name === currentBranch) {
           bundledVersions.push(await exportWorkingTreeVersion(projectRoot, ref.name, outputDir));
-        } else {
-          bundledVersions.push(await exportVersion(projectRoot, repository, ref, outputDir));
+          continue;
         }
+
+        bundledVersions.push(await exportVersion(projectRoot, repository, ref, outputDir));
       }
     }
 

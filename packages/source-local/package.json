@@ -1,11 +1,11 @@
 {
-  "name": "@scriptorium/bundle",
+  "name": "@scriptorium/source-local",
   "private": true,
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
     "@scriptorium/core": "workspace:*",
-    "@scriptorium/source-local": "workspace:*"
+    "@scriptorium/source-git": "workspace:*"
   }
 }

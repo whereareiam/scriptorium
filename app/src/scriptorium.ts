@@ -14,10 +14,10 @@ import {
   getRuntimePaths
 } from "@scriptorium/runtime";
 import {
-  createGitCliStageRepository,
   createIsomorphicGitStageRepository,
   syncIsomorphicGitRepository
 } from "@scriptorium/source-git";
+import { createLocalStageRepository } from "@scriptorium/source-local";
 
 function isRuntimeBundleEnabled() {
   return getRuntimeConfig().source.type === "git";
@@ -42,7 +42,7 @@ const runtimeSnapshotController = createRuntimeSnapshotController(async (repoDir
 async function ensureLocalBundle(projectRoot: string) {
   return buildProjectBundle({
     projectRoot,
-    repository: createGitCliStageRepository(projectRoot)
+    repository: createLocalStageRepository(projectRoot)
   });
 }
 

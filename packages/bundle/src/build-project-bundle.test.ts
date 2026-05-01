@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "bun:test";
 import { isBundledContractPath } from "@scriptorium/core";
 import { createGitCliStageRepository, createIsomorphicGitStageRepository } from "@scriptorium/source-git";
+import { createLocalStageRepository } from "@scriptorium/source-local";
 import { createDocsSourceAccess } from "@scriptorium/content";
 import { readBundleManifest } from "./read-bundle-manifest";
 import { buildProjectBundle } from "./build-project-bundle";
@@ -211,6 +212,39 @@ describe("buildProjectBundle", () => {
       "v1.0.0",
       "v1.1.0"
     ]);
+  });
+
+  it("uses the local working tree for the home version in local preview mode", async () => {
+    const { projectRoot, repoRoot } = await createFixtureRepo();
+
+    git(repoRoot, ["checkout", "feature/ignore-me"]);
+    await mkdir(path.join(projectRoot, "docs", "content", "providers"), { recursive: true });
+    await writeFile(
+      path.join(projectRoot, "docs", "content", "providers", "meta.json"),
+      JSON.stringify({ title: "Providers", pages: ["index"] }, null, 2)
+    );
+    await writeFile(
+      path.join(projectRoot, "docs", "content", "providers", "index.md"),
+      "# Providers\n"
+    );
+
+    await buildProjectBundle({
+      projectRoot,
+      repository: createLocalStageRepository(projectRoot)
+    });
+
+    expect(
+      await readFile(
+        path.join(projectRoot, ".scriptorium", "bundle", "versions", "dev", "content", "providers", "index.md"),
+        "utf8"
+      )
+    ).toContain("# Providers");
+    expect(
+      await readFile(
+        path.join(projectRoot, ".scriptorium", "bundle", "versions", "dev", "content", "providers", "meta.json"),
+        "utf8"
+      )
+    ).toContain("\"title\": \"Providers\"");
   });
 
   it("serializes concurrent staging to the same output directory", async () => {
