@@ -8,6 +8,7 @@ import {
   createDocsSourceAccess
 } from "@scriptorium/content";
 import {
+  createRuntimeWarmup,
   createRuntimeSnapshotController,
   getLocalProjectRoot,
   getRuntimeConfig,
@@ -18,6 +19,7 @@ import {
   syncIsomorphicGitRepository
 } from "@scriptorium/source-git";
 import { createLocalStageRepository } from "@scriptorium/source-local";
+import { createSearchRuntime } from "@/search-runtime";
 
 function isRuntimeBundleEnabled() {
   return getRuntimeConfig().source.type === "git";
@@ -64,17 +66,24 @@ const handleWebhookTrigger = createWebhookTriggerHandler({
   refresh: runtimeSnapshotController.refreshRuntimeSnapshot,
   getSecret: () => getRuntimeConfig().triggers?.webhook?.secret
 });
+const runtimeWarmup = createRuntimeWarmup({
+  isRuntimeBundleEnabled,
+  getRuntimeConfig,
+  ensureRuntimeSnapshot: runtimeSnapshotController.ensureRuntimeSnapshot
+});
+const { searchHandler, warmSearchIndex } = createSearchRuntime(docsSourceAccess.getSource);
 
 async function ensureRuntimeReady() {
-  if (isRuntimeBundleEnabled()) {
-    await runtimeSnapshotController.ensureRuntimeSnapshot();
-  }
+  runtimeWarmup.startBackgroundWarmup();
+  warmSearchIndex();
 
   await docsSourceAccess.getSource();
 }
 
 export { buildWorkspaceThemeStylesheet, getRefMetadata, getRefUrl, handleWebhookTrigger, readCurrentAsset };
 export const { ensureRuntimeSnapshot, refreshRuntimeSnapshot } = runtimeSnapshotController;
+export const { getReadiness: getRuntimeReadiness, startBackgroundWarmup: startRuntimeWarmup } = runtimeWarmup;
+export { searchHandler, warmSearchIndex };
 export { ensureRuntimeReady };
 export const { getBundledSite, getProjectConfig, getPublishedVersions } = bundledSiteAccess;
 export const { getSource } = docsSourceAccess;
