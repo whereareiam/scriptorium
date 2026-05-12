@@ -17,6 +17,7 @@
     "@scriptorium/trigger-webhook": "workspace:*",
     "@scriptorium/runtime": "workspace:*",
     "@scriptorium/ui": "workspace:*",
+    "fumadocs-core": "^16.8.5",
     "fumadocs-ui": "^16.8.5",
     "next": "^16.2.4",
     "react": "^19.2.5",
