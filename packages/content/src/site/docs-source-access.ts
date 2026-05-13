@@ -4,6 +4,7 @@ import { loader, type LoaderPlugin, type MetaData, type StaticSource, type Virtu
 import { lucideIconsPlugin } from "fumadocs-core/source/lucide-icons";
 import { getRefMetadata, toRefSlug, type ScriptoriumProjectConfig } from "@scriptorium/core";
 import type { BundleManifest } from "@scriptorium/bundle";
+import { isPartialContentPath, PARTIALS_DIR_NAME, remarkPartialIncludes } from "../mdx/include-directive";
 
 type CombinedPageData = LocalMarkdownPage<Record<string, unknown>, Record<string, unknown>>;
 type CombinedMetaData = MetaData;
@@ -23,10 +24,17 @@ export function createDocsSourceAccess(getBundledSite: (projectRoot?: string) =>
 
     for (const version of bundle.versions) {
       const docs = localMd({
-        dir: version.contentDir
+        dir: version.contentDir,
+        include: [
+          "**/*.{md,mdx,json}",
+          `!**/${PARTIALS_DIR_NAME}/**`
+        ],
+        mdxOptions: {
+          remarkPlugins: [remarkPartialIncludes(version.contentDir)]
+        }
       });
       const staticSource = await docs.staticSource();
-      files.push(...prefixRefFiles(staticSource, bundle.project, version.name));
+      files.push(...prefixRefFiles(filterPublicFiles(staticSource), bundle.project, version.name));
     }
 
     const source = loader({ files }, {
@@ -42,6 +50,12 @@ export function createDocsSourceAccess(getBundledSite: (projectRoot?: string) =>
 
   return {
     getSource
+  };
+}
+
+function filterPublicFiles(source: CombinedSource): CombinedSource {
+  return {
+    files: source.files.filter((file) => !isPartialContentPath(file.path))
   };
 }
 

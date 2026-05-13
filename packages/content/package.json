@@ -9,6 +9,8 @@
     "@scriptorium/bundle": "workspace:*",
     "@scriptorium/core": "workspace:*",
     "fumadocs-core": "^16.8.5",
+    "remark": "^15.0.1",
+    "remark-mdx": "^3.1.1",
     "react": "^19.2.5"
   }
 }

@@ -27,6 +27,14 @@ Consumer repositories only need:
 - `docs/assets/**`
 - `scriptorium.project.json`
 
+Shared doc-only partials can live under `docs/content/_partials/**` and be reused from MDX with:
+
+```mdx
+<Include src="./_partials/shared-proxy.mdx" />
+```
+
+Those partials are expanded at compile time, so they stay out of navigation as standalone pages while remaining part of the page's compiled content for things like search and table-of-contents extraction.
+
 The deployed Scriptorium app is configured with:
 
 - source type (`git` today, with room for additional source adapters)
