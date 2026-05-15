@@ -31,10 +31,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const workspaceThemeCss = buildWorkspaceThemeStylesheet(project);
 
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <WorkspaceBody>
         {workspaceThemeCss ? <style>{workspaceThemeCss}</style> : null}
-        <RootProvider theme={{ enabled: false }}>{children}</RootProvider>
+        <RootProvider>{children}</RootProvider>
       </WorkspaceBody>
     </html>
   );
