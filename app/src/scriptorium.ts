@@ -15,8 +15,8 @@ import {
   getRuntimePaths
 } from "@scriptorium/runtime";
 import {
-  createIsomorphicGitStageRepository,
-  syncIsomorphicGitRepository
+  createGitCliStageRepository,
+  syncGitCliRepository
 } from "@scriptorium/source-git";
 import { createLocalStageRepository } from "@scriptorium/source-local";
 import { createSearchRuntime } from "@/search-runtime";
@@ -30,7 +30,7 @@ const runtimeSnapshotController = createRuntimeSnapshotController(async (repoDir
     throw new Error("Runtime source.target is not configured for git source mode.");
   }
 
-  await syncIsomorphicGitRepository({
+  await syncGitCliRepository({
     repoDir,
     repoUrl: config.source.target,
     defaultBranch: config.source.defaultBranch,
@@ -38,7 +38,7 @@ const runtimeSnapshotController = createRuntimeSnapshotController(async (repoDir
     authUsername: config.source.auth?.username
   });
 
-  return createIsomorphicGitStageRepository(repoDir);
+  return createGitCliStageRepository(repoDir);
 });
 
 async function ensureLocalBundle(projectRoot: string) {

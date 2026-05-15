@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, realpath, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   assertProjectStructure,
@@ -31,7 +31,7 @@ async function buildWorkingTreeVersions(projectRoot: string, outputDir: string, 
 }
 
 export async function buildProjectBundle(options: BuildProjectBundleOptions) {
-  const projectRoot = path.resolve(options.projectRoot ?? process.cwd());
+  const projectRoot = await realpath(path.resolve(options.projectRoot ?? process.cwd()));
   const outputDir = path.resolve(options.outputDir ?? path.join(projectRoot, ".scriptorium", "bundle"));
   const lockKey = outputDir;
   const existing = bundleLocks.get(lockKey);

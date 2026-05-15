@@ -46,8 +46,6 @@ The deployed Scriptorium app is configured with:
 
 and fetches content from the consumer repo at runtime.
 
-The production runtime sync path uses `isomorphic-git`, so the deploy image does not need the system `git` binary.
-
 ## Local development
 
 Run the Scriptorium app against the local example fixture:

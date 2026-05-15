@@ -1,10 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "bun:test";
 import { isBundledContractPath } from "@scriptorium/core";
-import { createGitCliStageRepository, createIsomorphicGitStageRepository } from "@scriptorium/source-git";
+import { createGitCliStageRepository } from "@scriptorium/source-git";
 import { createLocalStageRepository } from "@scriptorium/source-local";
 import { createDocsSourceAccess } from "@scriptorium/content";
 import { readBundleManifest } from "./read-bundle-manifest";
@@ -128,8 +128,8 @@ describe("buildProjectBundle", () => {
     const bundledDraftPath = path.join(projectRoot, ".scriptorium", "bundle", "versions", "dev", "draft.md");
     await expect(readFile(bundledDraftPath, "utf8")).rejects.toThrow();
 
-    expect(isBundledContractPath("apps/docs-site/docs/content/index.mdx", projectRoot, manifest.repoRoot)).toBe(true);
-    expect(isBundledContractPath("apps/docs-site/docs/not-bundled/draft.md", projectRoot, manifest.repoRoot)).toBe(false);
+    expect(isBundledContractPath("apps/docs-site/docs/content/index.mdx", await realpath(projectRoot), manifest.repoRoot)).toBe(true);
+    expect(isBundledContractPath("apps/docs-site/docs/not-bundled/draft.md", await realpath(projectRoot), manifest.repoRoot)).toBe(false);
   });
 
   it("builds a loader that excludes non-doc fixture content", async () => {
@@ -197,21 +197,6 @@ describe("buildProjectBundle", () => {
     expect(normal?.index?.url).toBe("/docs/dev/installation/normal");
     expect(normal?.children).toEqual([]);
     expect(normal?.collapsible).toBe(false);
-  });
-
-  it("supports staging through the isomorphic git repository adapter", async () => {
-    const { projectRoot, repoRoot } = await createFixtureRepo();
-    const manifest = await buildProjectBundle({
-      projectRoot,
-      repository: createIsomorphicGitStageRepository(repoRoot)
-    });
-
-    expect(manifest.versions.map((version) => version.name)).toEqual([
-      "dev",
-      "release/1.x",
-      "v1.0.0",
-      "v1.1.0"
-    ]);
   });
 
   it("uses the local working tree for the home version in local preview mode", async () => {

@@ -7,6 +7,10 @@ ENV HOSTNAME=0.0.0.0
 
 USER root
 
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends git ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 COPY app/.next/standalone/app ./
 COPY app/.next/standalone/node_modules ./node_modules
 COPY app/.next/standalone/example /example

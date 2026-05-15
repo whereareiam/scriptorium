@@ -30,6 +30,7 @@ export function listGitRefs(projectRoot: string) {
   for (const line of output.split("\n")) {
     const [rawName, fullName, objectName] = line.split("|");
     if (rawName === "origin/HEAD") continue;
+    if (rawName === "origin") continue;
 
     const kind = fullName.startsWith("refs/tags/") ? "tag" : "branch";
     const name = rawName.startsWith("origin/") ? rawName.slice("origin/".length) : rawName;
