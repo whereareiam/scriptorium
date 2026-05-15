@@ -69,6 +69,23 @@ describe("createDocsSourceAccess", () => {
     expect(html).toContain("Velocity and Bungeecord share this explanation.");
     expect(html).toContain("Paper uses its own explanation.");
   });
+
+  it("reloads the docs source after invalidation", async () => {
+    const contentDir = await mkdtemp(path.join(os.tmpdir(), "scriptorium-content-"));
+    await writeBasicDocs(contentDir, "First title");
+
+    const sourceAccess = createDocsSourceAccess(async () => createBundleManifest(contentDir));
+    const first = await loadIndexTitle(sourceAccess);
+
+    await writeBasicDocs(contentDir, "Second title");
+    const cached = await loadIndexTitle(sourceAccess);
+    sourceAccess.invalidate();
+    const reloaded = await loadIndexTitle(sourceAccess);
+
+    expect(first).toBe("First title");
+    expect(cached).toBe("First title");
+    expect(reloaded).toBe("Second title");
+  });
 });
 
 async function writeJson(filePath: string, value: unknown) {
@@ -101,4 +118,34 @@ function createBundleManifest(contentDir: string): BundleManifest {
       }
     ]
   };
+}
+
+async function writeBasicDocs(contentDir: string, title: string) {
+  await mkdir(contentDir, { recursive: true });
+  await writeJson(path.join(contentDir, "meta.json"), {
+    title: "Docs",
+    pages: ["index"]
+  });
+  await writeFile(
+    path.join(contentDir, "index.mdx"),
+    [
+      "---",
+      `title: ${title}`,
+      "---",
+      "",
+      `# ${title}`
+    ].join("\n")
+  );
+}
+
+async function loadIndexTitle(sourceAccess: ReturnType<typeof createDocsSourceAccess>) {
+  const { source } = await sourceAccess.getSource();
+  const page = source.getPage(["dev"]);
+
+  if (!page) {
+    throw new Error("Expected index page to be available.");
+  }
+
+  const loaded = await page.data.load();
+  return page.data.title ?? loaded.structuredData.headings[0]?.content;
 }

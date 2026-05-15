@@ -62,28 +62,41 @@ const readCurrentAsset = createCurrentAssetReader({
   isRuntimeBundleEnabled,
   getRuntimeBundleDir: () => getRuntimePaths().bundleDir
 });
-const handleWebhookTrigger = createWebhookTriggerHandler({
-  refresh: runtimeSnapshotController.refreshRuntimeSnapshot,
-  getSecret: () => getRuntimeConfig().triggers?.webhook?.secret
-});
 const runtimeWarmup = createRuntimeWarmup({
   isRuntimeBundleEnabled,
   getRuntimeConfig,
   ensureRuntimeSnapshot: runtimeSnapshotController.ensureRuntimeSnapshot
 });
-const { searchHandler, warmSearchIndex } = createSearchRuntime(docsSourceAccess.getSource);
+const searchRuntime = createSearchRuntime(docsSourceAccess.getSource);
+
+async function warmRuntimeContent() {
+  await docsSourceAccess.getSource();
+  await searchRuntime.warmSearchIndex();
+}
+
+async function refreshRuntimeContent() {
+  await runtimeSnapshotController.refreshRuntimeSnapshot();
+  bundledSiteAccess.invalidate();
+  docsSourceAccess.invalidate();
+  searchRuntime.invalidate();
+  await warmRuntimeContent();
+}
+
+const handleWebhookTrigger = createWebhookTriggerHandler({
+  refresh: refreshRuntimeContent,
+  getSecret: () => getRuntimeConfig().triggers?.webhook?.secret
+});
 
 async function ensureRuntimeReady() {
   runtimeWarmup.startBackgroundWarmup();
-  warmSearchIndex();
-
-  await docsSourceAccess.getSource();
+  await warmRuntimeContent();
 }
 
 export { buildWorkspaceThemeStylesheet, getRefMetadata, getRefUrl, handleWebhookTrigger, readCurrentAsset };
-export const { ensureRuntimeSnapshot, refreshRuntimeSnapshot } = runtimeSnapshotController;
+export const { ensureRuntimeSnapshot } = runtimeSnapshotController;
+export const refreshRuntimeSnapshot = refreshRuntimeContent;
 export const { getReadiness: getRuntimeReadiness, startBackgroundWarmup: startRuntimeWarmup } = runtimeWarmup;
-export { searchHandler, warmSearchIndex };
+export const { searchHandler, warmSearchIndex } = searchRuntime;
 export { ensureRuntimeReady };
 export const { getBundledSite, getProjectConfig, getPublishedVersions } = bundledSiteAccess;
 export const { getSource } = docsSourceAccess;

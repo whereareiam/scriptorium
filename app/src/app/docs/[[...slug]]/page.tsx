@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import type { LocalMarkdownPage } from "@fumadocs/local-md";
-import { getProjectConfig, getRefUrl, getSource } from "@/scriptorium";
+import { getProjectConfig, getRefUrl, getRuntimeReadiness, getSource } from "@/scriptorium";
 import { getMDXComponents } from "@scriptorium/ui";
 import { createRelativeLink } from "fumadocs-ui/mdx";
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/layouts/docs/page";
@@ -44,6 +44,13 @@ export default async function DocsPageRoute(
 export async function generateMetadata(
   { params }: { params: Promise<{ slug?: string[] }> }
 ): Promise<Metadata> {
+  const readiness = await getRuntimeReadiness();
+  if (!readiness.ready) {
+    return {
+      title: "Preparing documentation"
+    };
+  }
+
   const { slug = [] } = await params;
   if (slug.length === 0) {
     const config = await getProjectConfig();

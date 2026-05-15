@@ -22,6 +22,8 @@ export function createRuntimeSnapshotController(syncRepository: RuntimeRepositor
     const existing = syncLocks.get(lockKey);
     if (existing) {
       await existing;
+      if (force) return ensureRuntimeSnapshot(true);
+
       return;
     }
 

@@ -1,10 +1,10 @@
 import { createFromSource } from "fumadocs-core/search/server";
 import type { DocsSource } from "@scriptorium/content";
 
-let cachedSearchSource: Promise<DocsSource> | null = null;
-let warmedSearchIndex: Promise<void> | null = null;
-
 export function createSearchRuntime(getSource: () => Promise<{ source: DocsSource }>) {
+  let cachedSearchSource: Promise<DocsSource> | null = null;
+  let warmedSearchIndex: Promise<void> | null = null;
+
   function getSearchSource() {
     cachedSearchSource ??= getSource().then(({ source }) => source);
     return cachedSearchSource;
@@ -20,8 +20,14 @@ export function createSearchRuntime(getSource: () => Promise<{ source: DocsSourc
     return warmedSearchIndex;
   }
 
+  function invalidate() {
+    cachedSearchSource = null;
+    warmedSearchIndex = null;
+  }
+
   return {
     searchHandler,
-    warmSearchIndex
+    warmSearchIndex,
+    invalidate
   };
 }

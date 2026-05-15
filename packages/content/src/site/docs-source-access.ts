@@ -1,4 +1,3 @@
-import { cache } from "react";
 import { localMd, type LocalMarkdownPage } from "@fumadocs/local-md";
 import { loader, type LoaderPlugin, type MetaData, type StaticSource, type VirtualFile } from "fumadocs-core/source";
 import { lucideIconsPlugin } from "fumadocs-core/source/lucide-icons";
@@ -18,7 +17,7 @@ type CombinedVirtualFile = VirtualFile<{
 }>;
 
 export function createDocsSourceAccess(getBundledSite: (projectRoot?: string) => Promise<BundleManifest>) {
-  const getSource = cache(async (projectRoot?: string) => {
+  async function loadSource(projectRoot?: string) {
     const bundle = await getBundledSite(projectRoot);
     const files: CombinedVirtualFile[] = [];
 
@@ -46,10 +45,32 @@ export function createDocsSourceAccess(getBundledSite: (projectRoot?: string) =>
     });
 
     return { source };
-  });
+  }
+
+  const sources = new Map<string, ReturnType<typeof loadSource>>();
+
+  function getSource(projectRoot?: string) {
+    const cacheKey = projectRoot ?? "";
+    let source = sources.get(cacheKey);
+    if (source) return source;
+
+    source = loadSource(projectRoot);
+    sources.set(cacheKey, source);
+    return source;
+  }
+
+  function invalidate(projectRoot?: string) {
+    if (projectRoot) {
+      sources.delete(projectRoot);
+      return;
+    }
+
+    sources.clear();
+  }
 
   return {
-    getSource
+    getSource,
+    invalidate
   };
 }
 
