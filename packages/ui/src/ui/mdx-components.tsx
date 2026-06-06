@@ -1,6 +1,7 @@
 import type {FC} from "react";
 import type {MDXComponents} from "mdx/types";
 import * as Accordions from "fumadocs-ui/components/accordion";
+import * as Steps from "fumadocs-ui/components/steps";
 import * as Tabs from "fumadocs-ui/components/tabs";
 import * as Icons from "lucide-react";
 import defaultMdxComponents from "fumadocs-ui/mdx";
@@ -13,6 +14,7 @@ export function getMDXComponents(components?: MDXComponents) {
     ...defaultMdxComponents,
     ...(Icons as unknown as Record<keyof typeof Icons, FC>),
     ...Accordions,
+    ...Steps,
     ...ContentTabs,
     ...Tabs,
     ...Badge,

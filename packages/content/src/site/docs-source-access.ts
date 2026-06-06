@@ -1,5 +1,6 @@
 import { localMd, type LocalMarkdownPage } from "@fumadocs/local-md";
 import { loader, type LoaderPlugin, type MetaData, type StaticSource, type VirtualFile } from "fumadocs-core/source";
+import { remarkSteps } from "fumadocs-core/mdx-plugins";
 import { lucideIconsPlugin } from "fumadocs-core/source/lucide-icons";
 import { getRefMetadata, toRefSlug, type ScriptoriumProjectConfig } from "@scriptorium/core";
 import type { BundleManifest } from "@scriptorium/bundle";
@@ -29,7 +30,7 @@ export function createDocsSourceAccess(getBundledSite: (projectRoot?: string) =>
           `!**/${PARTIALS_DIR_NAME}/**`
         ],
         mdxOptions: {
-          remarkPlugins: [remarkPartialIncludes(version.contentDir)]
+          remarkPlugins: [remarkPartialIncludes(version.contentDir), remarkSteps]
         }
       });
       const staticSource = await docs.staticSource();

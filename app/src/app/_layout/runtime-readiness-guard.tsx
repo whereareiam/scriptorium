@@ -5,20 +5,19 @@ import { RuntimeWarmupScreen } from "./runtime-warmup-screen";
 
 export function RuntimeReadinessGuard(
   {
+    activeGenerationId,
     captions,
     children
   }: {
+    activeGenerationId?: string;
     captions: string[];
     children: ReactNode;
   }
 ) {
   const [blocked, setBlocked] = useState(false);
+  const [currentGenerationId, setCurrentGenerationId] = useState(activeGenerationId);
 
   useEffect(() => {
-    if (blocked) {
-      return;
-    }
-
     let disposed = false;
 
     async function checkReadiness() {
@@ -26,13 +25,24 @@ export function RuntimeReadinessGuard(
         const response = await fetch("/api/health/ready", {
           cache: "no-store"
         });
-        const nextStatus = await response.json() as { ok?: boolean };
+        const nextStatus = await response.json() as {
+          ok?: boolean;
+          activeGenerationId?: string;
+        };
 
-        if (disposed || nextStatus.ok !== false) {
+        if (disposed) {
           return;
         }
 
-        setBlocked(true);
+        if (nextStatus.ok === false) {
+          setBlocked(true);
+          return;
+        }
+
+        if (nextStatus.activeGenerationId && nextStatus.activeGenerationId !== currentGenerationId) {
+          setCurrentGenerationId(nextStatus.activeGenerationId);
+          window.location.reload();
+        }
       } catch {
         // Keep the current page visible on transient polling failures.
       }
@@ -46,7 +56,7 @@ export function RuntimeReadinessGuard(
       disposed = true;
       window.clearInterval(interval);
     };
-  }, [blocked]);
+  }, [blocked, currentGenerationId]);
 
   if (blocked) {
     return <RuntimeWarmupScreen captions={captions} />;

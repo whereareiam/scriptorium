@@ -39,7 +39,12 @@ export default async function DocsPageRoute(
   );
 
   return (
-    <DocsPage toc={toc}>
+    <DocsPage
+      toc={toc}
+      tableOfContent={{
+        style: "clerk"
+      }}
+    >
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>{body}</DocsBody>

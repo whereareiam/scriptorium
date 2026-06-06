@@ -21,8 +21,13 @@ export interface RuntimeReadiness {
 }
 
 interface PersistedRuntimeState {
+  instanceId: string;
+  phase: RuntimePhase;
+  startedAt?: string;
+  finishedAt?: string;
   activeGenerationId?: string;
   lastSuccessfulPreparedAt?: string;
+  error?: string;
 }
 
 interface PreparationContext {
@@ -42,13 +47,16 @@ export function createRuntimePreparationController<Value>(options: {
   getRuntimeConfig: () => RuntimeConfig;
   prepare: (context: PreparationContext) => Promise<Value>;
   activate: (result: PreparationResult<Value>) => Promise<void> | void;
+  instanceId?: string;
 }) {
+  const instanceId = options.instanceId ?? String(process.pid);
   let status: RuntimeReadinessStatus = {
     phase: "idle"
   };
   let currentRun: Promise<void> | null = null;
   let rerunRequested = false;
   let servicesStarted = false;
+  let queuedStateWrite: Promise<void> = Promise.resolve();
 
   async function startBackgroundPreparation() {
     if (servicesStarted)
@@ -93,6 +101,7 @@ export function createRuntimePreparationController<Value>(options: {
       finishedAt: undefined,
       error: undefined
     };
+    await queueStateWrite(stateFile, status);
 
     try {
       const value = await options.prepare({
@@ -104,6 +113,7 @@ export function createRuntimePreparationController<Value>(options: {
             ...status,
             phase
           };
+          void queueStateWrite(stateFile, status);
         }
       });
 
@@ -122,30 +132,31 @@ export function createRuntimePreparationController<Value>(options: {
         activeGenerationId: generationId
       };
 
-      await writeRuntimeState(stateFile, {
-        activeGenerationId: generationId,
-        lastSuccessfulPreparedAt: finishedAt
-      });
+      await queueStateWrite(stateFile, status);
     } catch (error: unknown) {
       const persisted = await readRuntimeState(stateFile);
       status = {
         phase: "error",
         startedAt,
         finishedAt: new Date().toISOString(),
-        lastSuccessfulPreparedAt: persisted?.lastSuccessfulPreparedAt,
-        activeGenerationId: persisted?.activeGenerationId,
+        lastSuccessfulPreparedAt: persisted?.instanceId === instanceId ? persisted.lastSuccessfulPreparedAt : undefined,
+        activeGenerationId: persisted?.instanceId === instanceId ? persisted.activeGenerationId : undefined,
         error: error instanceof Error ? error.message : String(error)
       };
+      await queueStateWrite(stateFile, status);
     }
   }
 
   async function getReadiness(): Promise<RuntimeReadiness> {
     const persisted = await readRuntimeState(getRuntimePaths().stateFile);
-    if (persisted && !status.lastSuccessfulPreparedAt && !status.activeGenerationId) {
+    if (persisted?.instanceId === instanceId) {
       status = {
-        ...status,
+        phase: persisted.phase,
+        startedAt: persisted.startedAt,
+        finishedAt: persisted.finishedAt,
         lastSuccessfulPreparedAt: persisted.lastSuccessfulPreparedAt,
-        activeGenerationId: persisted.activeGenerationId
+        activeGenerationId: persisted.activeGenerationId,
+        error: persisted.error
       };
     }
 
@@ -153,6 +164,14 @@ export function createRuntimePreparationController<Value>(options: {
       ok: status.phase === "ready",
       status
     };
+  }
+
+  function queueStateWrite(stateFile: string, nextStatus: RuntimeReadinessStatus) {
+    queuedStateWrite = queuedStateWrite
+      .catch(() => undefined)
+      .then(() => writeRuntimeState(stateFile, toPersistedRuntimeState(nextStatus, instanceId)));
+
+    return queuedStateWrite;
   }
 
   return {
@@ -178,4 +197,16 @@ async function writeRuntimeState(stateFile: string, state: PersistedRuntimeState
   await writeFile(tmpPath, JSON.stringify(state, null, 2));
   await rm(stateFile, { force: true }).catch(() => undefined);
   await rename(tmpPath, stateFile);
+}
+
+function toPersistedRuntimeState(status: RuntimeReadinessStatus, instanceId: string): PersistedRuntimeState {
+  return {
+    instanceId,
+    phase: status.phase,
+    startedAt: status.startedAt,
+    finishedAt: status.finishedAt,
+    activeGenerationId: status.activeGenerationId,
+    lastSuccessfulPreparedAt: status.lastSuccessfulPreparedAt,
+    error: status.error
+  };
 }

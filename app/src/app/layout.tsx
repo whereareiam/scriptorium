@@ -59,13 +59,16 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const project = await getProjectConfig();
   const captions = await getBundlingCaptions();
   const workspaceThemeCss = buildWorkspaceThemeStylesheet(project);
+  const activeGenerationId = readiness.status.activeGenerationId;
 
   return (
     <html lang="en" suppressHydrationWarning>
       <WorkspaceBody>
         {workspaceThemeCss ? <style>{workspaceThemeCss}</style> : null}
         <RootProvider search={{ SearchDialog }}>
-          <RuntimeReadinessGuard captions={captions}>{children}</RuntimeReadinessGuard>
+          <RuntimeReadinessGuard activeGenerationId={activeGenerationId} captions={captions}>
+            {children}
+          </RuntimeReadinessGuard>
         </RootProvider>
       </WorkspaceBody>
     </html>

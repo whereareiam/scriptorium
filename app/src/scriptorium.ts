@@ -70,16 +70,14 @@ async function handleSourceWebhook(request: Request) {
 function ensureRuntimeServices() {
   if (!singleton.servicesStarted) {
     singleton.servicesStarted = true;
-    if (singleton.sourceAdapter.shouldHydratePreparedContent()) {
-      void ensureHydratedPreparedContent()
-        .then((prepared) => {
-          if (!prepared) {
-            return singleton.runtimePreparationController.startBackgroundPreparation();
-          }
+    void ensureHydratedPreparedContent()
+      .then((prepared) => {
+        if (!prepared) {
+          return singleton.runtimePreparationController.startBackgroundPreparation();
+        }
 
-          return null;
-        });
-    }
+        return null;
+      });
   }
 
   if (singleton.runtimePreparationController.getStatus().phase === "idle" && !singleton.activePreparedContent) {
@@ -113,10 +111,6 @@ async function exportPreparedSearchIndex(source: DocsSource) {
 }
 
 async function ensureHydratedPreparedContent() {
-  if (!singleton.sourceAdapter.shouldHydratePreparedContent()) {
-    return null;
-  }
-
   if (singleton.activePreparedContent)
     return singleton.activePreparedContent;
 
@@ -133,8 +127,12 @@ async function ensureHydratedPreparedContent() {
 
 async function hydratePreparedContentFromState() {
   const state = await readPersistedRuntimeState();
-  if (!state?.activeGenerationId)
+  if (!state?.activeGenerationId || state.phase !== "ready")
     return null;
+
+  if (singleton.sourceAdapter.type === "local" && state.instanceId !== getRuntimeInstanceId()) {
+    return null;
+  }
 
   const generationDir = path.join(getRuntimePaths().generationsDir, state.activeGenerationId);
   const bundleDir = path.join(generationDir, "bundle");
@@ -158,6 +156,8 @@ async function readPersistedRuntimeState() {
   try {
     const raw = await readFile(getRuntimePaths().stateFile, "utf8");
     return JSON.parse(raw) as {
+      instanceId?: string;
+      phase?: "idle" | "bundling" | "preparing-content" | "preparing-search" | "ready" | "error";
       activeGenerationId?: string;
       lastSuccessfulPreparedAt?: string;
     };
@@ -214,7 +214,7 @@ export async function getPreparedSearchIndex() {
 export async function getRuntimeReadiness() {
   ensureRuntimeServices();
   const readiness = await singleton.runtimePreparationController.getReadiness();
-  if (readiness.ok || !singleton.sourceAdapter.shouldHydratePreparedContent()) {
+  if (readiness.ok || readiness.status.phase !== "idle") {
     return readiness;
   }
 
@@ -261,6 +261,7 @@ function createScriptoriumRuntimeSingleton(): ScriptoriumRuntimeSingleton {
     servicesStarted: false,
     sourceAdapter,
     runtimePreparationController: createRuntimePreparationController<PreparedRuntimeContent>({
+      instanceId: getRuntimeInstanceId(),
       getRuntimeConfig,
       async prepare({ generationDir, generationId, setPhase }) {
         await mkdir(generationDir, { recursive: true });
@@ -315,4 +316,8 @@ function createSourceRuntimeAdapter() {
   return createLocalSourceRuntimeAdapter({
     getLocalProjectRoot
   });
+}
+
+function getRuntimeInstanceId() {
+  return String(process.ppid && process.ppid > 1 ? process.ppid : process.pid);
 }

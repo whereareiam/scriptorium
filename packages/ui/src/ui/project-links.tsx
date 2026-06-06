@@ -1,7 +1,7 @@
 import type { LinkItemType } from "fumadocs-ui/layouts/shared";
 import * as Icons from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { createElement, type SVGProps } from "react";
+import { createElement, type ReactElement, type SVGProps } from "react";
 
 const ICON_NAME_ALIASES: Record<string, keyof typeof Icons> = {
   messagecircle: "MessageCircle"
@@ -10,14 +10,15 @@ const ICON_NAME_ALIASES: Record<string, keyof typeof Icons> = {
 const CUSTOM_ICONS = {
   github: GitHubIcon,
   discord: DiscordIcon
-} satisfies Record<string, (props: SVGProps<SVGSVGElement>) => JSX.Element>;
+} satisfies Record<string, (props: SVGProps<SVGSVGElement>) => ReactElement>;
 
 export function createProjectLinkIcon(iconName: string) {
   return createElement(resolveLucideIcon(iconName), {});
 }
 
 function resolveLucideIcon(iconName: string): LucideIcon {
-  const custom = CUSTOM_ICONS[normalizeIconName(iconName)];
+  const normalized = normalizeIconName(iconName);
+  const custom = CUSTOM_ICONS[normalized as keyof typeof CUSTOM_ICONS];
   if (custom) {
     return custom as unknown as LucideIcon;
   }
@@ -35,7 +36,6 @@ function resolveLucideIcon(iconName: string): LucideIcon {
     }
   }
 
-  const normalized = normalizeIconName(iconName);
   for (const [key, value] of Object.entries(Icons)) {
     if (normalizeIconName(key) === normalized && typeof value === "function") {
       return value as LucideIcon;
