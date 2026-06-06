@@ -13,8 +13,6 @@
     "@scriptorium/bundle": "workspace:*",
     "@scriptorium/source-git": "workspace:*",
     "@scriptorium/source-local": "workspace:*",
-    "@scriptorium/trigger": "workspace:*",
-    "@scriptorium/trigger-webhook": "workspace:*",
     "@scriptorium/runtime": "workspace:*",
     "@scriptorium/ui": "workspace:*",
     "fumadocs-core": "^16.8.5",

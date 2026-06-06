@@ -1,20 +1,17 @@
-import { getRuntimeReadiness, startRuntimeWarmup } from "@/scriptorium";
+import { getRuntimeReadiness } from "@/scriptorium";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  startRuntimeWarmup();
-
   const readiness = await getRuntimeReadiness();
-  const status = readiness.ready ? 200 : 503;
+  const status = readiness.ok ? 200 : 503;
 
   return Response.json(
     {
-      ok: readiness.ready,
-      warmed: readiness.status.phase === "ready",
-      cachedBundle: readiness.cachedBundle,
+      ok: readiness.ok,
       phase: readiness.status.phase,
-      runtimeEnabled: readiness.runtimeEnabled,
+      lastSuccessfulPreparedAt: readiness.status.lastSuccessfulPreparedAt,
+      activeGenerationId: readiness.status.activeGenerationId,
       error: readiness.status.error
     },
     {

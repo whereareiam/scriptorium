@@ -12,8 +12,7 @@ const config = {
     "@scriptorium/core",
     "@scriptorium/bundle",
     "@scriptorium/source-git",
-    "@scriptorium/trigger",
-    "@scriptorium/trigger-webhook",
+    "@scriptorium/source-local",
     "@scriptorium/runtime",
     "@scriptorium/ui"
   ],

@@ -8,7 +8,7 @@ It contains:
 - `packages/core/`: shared contracts, project config, and version metadata helpers
 - `packages/source-git/`: git-backed source implementation
 - `packages/bundle/`: normalized bundle generation from a source
-- `packages/runtime/`: runtime config, paths, snapshot refresh, and webhook helpers
+- `packages/runtime/`: runtime config, generation lifecycle, and readiness helpers
 - `packages/content/`: bundled content access, docs-source helpers, and theme helpers
 - `packages/ui/`: Scriptorium-specific React/UI helpers
 - `example/`: a minimal consumer-shaped fixture used for local development
@@ -104,7 +104,6 @@ Example git-backed config:
     }
   },
   "runtime": {
-    "refreshIntervalSeconds": 900,
     "dataDir": "/app/.scriptorium/runtime"
   },
   "triggers": {
@@ -114,6 +113,9 @@ Example git-backed config:
   }
 }
 ```
+
+Runtime refresh is webhook-driven in `git` mode and file-watch-driven in `local` mode.
+There is no scheduled refresh interval.
 
 `scriptorium.project.json` groups version publishing under one `versions` block:
 

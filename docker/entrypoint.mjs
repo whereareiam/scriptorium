@@ -35,7 +35,6 @@ function hasSourceEnvOverrides() {
     process.env.SCRIPTORIUM_PROJECT_ROOT ||
     process.env.SCRIPTORIUM_REPO_URL ||
     process.env.SCRIPTORIUM_DEFAULT_BRANCH ||
-    process.env.SCRIPTORIUM_REFRESH_INTERVAL_SECONDS ||
     process.env.SCRIPTORIUM_DATA_DIR ||
     process.env.SCRIPTORIUM_WEBHOOK_SECRET ||
     process.env.SCRIPTORIUM_GIT_AUTH_TOKEN ||
@@ -75,10 +74,9 @@ function buildConfigFromEnv() {
       )
     },
     ...(
-      process.env.SCRIPTORIUM_REFRESH_INTERVAL_SECONDS || process.env.SCRIPTORIUM_DATA_DIR
+      process.env.SCRIPTORIUM_DATA_DIR
         ? {
             runtime: {
-              ...(process.env.SCRIPTORIUM_REFRESH_INTERVAL_SECONDS ? { refreshIntervalSeconds: Number(process.env.SCRIPTORIUM_REFRESH_INTERVAL_SECONDS) } : {}),
               ...(process.env.SCRIPTORIUM_DATA_DIR ? { dataDir: process.env.SCRIPTORIUM_DATA_DIR } : {})
             }
           }

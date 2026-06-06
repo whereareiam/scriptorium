@@ -21,10 +21,8 @@ const runtimeConfigSchema = z.object({
     }
   }),
   runtime: z.object({
-    refreshIntervalSeconds: z.coerce.number().int().positive().default(900),
     dataDir: z.string().min(1).default(path.resolve(process.cwd(), ".scriptorium", "runtime"))
   }).default({
-    refreshIntervalSeconds: 900,
     dataDir: path.resolve(process.cwd(), ".scriptorium", "runtime")
   }),
   triggers: z.object({

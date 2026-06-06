@@ -1,12 +1,17 @@
 import type { ReactNode } from "react";
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
 import type { BundledVersion } from "@scriptorium/bundle";
-import { getProjectConfig, getPublishedVersions, getRefMetadata, getRefUrl, getSource } from "@/scriptorium";
+import { getProjectConfig, getPublishedVersions, getRefMetadata, getRefUrl, getRuntimeReadiness, getSource } from "@/scriptorium";
 import { resolveProjectAssetUrl } from "../_layout/project-assets";
 
 export const dynamic = "force-dynamic";
 
 export default async function DocsRootLayout({ children }: { children: ReactNode }) {
+  const readiness = await getRuntimeReadiness();
+  if (!readiness.ok) {
+    return children;
+  }
+
   const project = await getProjectConfig();
   const versions = await getPublishedVersions();
   const { source } = await getSource();

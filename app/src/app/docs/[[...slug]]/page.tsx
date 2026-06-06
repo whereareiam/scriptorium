@@ -11,6 +11,11 @@ export const dynamic = "force-dynamic";
 export default async function DocsPageRoute(
   { params }: { params: Promise<{ slug?: string[] }> }
 ) {
+  const readiness = await getRuntimeReadiness();
+  if (!readiness.ok) {
+    return null;
+  }
+
   const { slug = [] } = await params;
   if (slug.length === 0) {
     const config = await getProjectConfig();
@@ -45,7 +50,7 @@ export async function generateMetadata(
   { params }: { params: Promise<{ slug?: string[] }> }
 ): Promise<Metadata> {
   const readiness = await getRuntimeReadiness();
-  if (!readiness.ready) {
+  if (!readiness.ok) {
     return {
       title: "Preparing documentation"
     };

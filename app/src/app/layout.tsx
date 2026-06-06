@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { RootProvider } from "fumadocs-ui/provider/next";
-import { buildWorkspaceThemeStylesheet, getProjectConfig, getRuntimeReadiness, startRuntimeWarmup } from "@/scriptorium";
+import { buildWorkspaceThemeStylesheet, getProjectConfig, getRuntimeReadiness } from "@/scriptorium";
+import { RuntimeReadinessGuard } from "./_layout/runtime-readiness-guard";
+import { SearchDialog } from "./_layout/search-dialog";
 import { resolveProjectAssetUrl, resolveProjectFaviconUrl } from "./_layout/project-assets";
 import { RuntimeWarmupScreen } from "./_layout/runtime-warmup-screen";
 import { WorkspaceBody } from "./_layout/workspace-body";
@@ -11,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const readiness = await getRuntimeReadiness();
-  if (!readiness.ready) {
+  if (!readiness.ok) {
     return {
       title: "Preparing documentation"
     };
@@ -36,9 +38,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const readiness = await getRuntimeReadiness();
-  if (!readiness.ready) {
-    startRuntimeWarmup();
-
+  if (!readiness.ok) {
     return (
       <html lang="en" suppressHydrationWarning>
         <body className="min-h-screen bg-fd-background text-fd-foreground" suppressHydrationWarning>
@@ -57,7 +57,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <WorkspaceBody>
         {workspaceThemeCss ? <style>{workspaceThemeCss}</style> : null}
-        <RootProvider>{children}</RootProvider>
+        <RootProvider search={{ SearchDialog }}>
+          <RuntimeReadinessGuard>{children}</RuntimeReadinessGuard>
+        </RootProvider>
       </WorkspaceBody>
     </html>
   );

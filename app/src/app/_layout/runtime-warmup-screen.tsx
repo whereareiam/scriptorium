@@ -4,14 +4,14 @@ import { useEffect, useState } from "react";
 
 interface ReadinessResponse {
   ok: boolean;
-  phase?: "idle" | "warming" | "ready" | "error";
+  phase?: "idle" | "bundling" | "preparing-content" | "preparing-search" | "ready" | "error";
   error?: string;
 }
 
 export function RuntimeWarmupScreen() {
   const [status, setStatus] = useState<ReadinessResponse>({
     ok: false,
-    phase: "warming"
+    phase: "bundling"
   });
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export function RuntimeWarmupScreen() {
         if (!disposed) {
           setStatus({
             ok: false,
-            phase: "warming"
+            phase: "bundling"
           });
         }
       }
@@ -52,6 +52,11 @@ export function RuntimeWarmupScreen() {
   }, []);
 
   const hasError = status.phase === "error";
+  const statusText = status.phase === "preparing-content"
+    ? "Content is being prepared."
+    : status.phase === "preparing-search"
+      ? "Search is being prepared."
+      : "The latest content is being bundled. This page will refresh automatically.";
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-fd-background px-6 text-fd-foreground">
@@ -67,7 +72,7 @@ export function RuntimeWarmupScreen() {
           <p className="text-sm leading-6 text-fd-muted-foreground">
             {hasError
               ? status.error ?? "The latest bundle could not be built."
-              : "The latest content is being bundled. This page will refresh automatically."}
+              : statusText}
           </p>
         </div>
       </div>

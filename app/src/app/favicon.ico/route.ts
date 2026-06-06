@@ -1,4 +1,4 @@
-import { getProjectConfig, readCurrentAsset } from "@/scriptorium";
+import { getProjectConfig, getRuntimeReadiness, readCurrentAsset } from "@/scriptorium";
 import {
   getAssetContentType,
   resolveProjectFaviconAssetPath,
@@ -8,6 +8,11 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const readiness = await getRuntimeReadiness();
+  if (!readiness.ok) {
+    return new Response(null, { status: 503 });
+  }
+
   const project = await getProjectConfig();
   const faviconPath = resolveProjectFaviconAssetPath(project);
   const assetSegments = toCurrentAssetSegments(faviconPath);
