@@ -5,7 +5,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@scriptorium/bundle": "workspace:*",
     "@scriptorium/core": "workspace:*"
   }
 }

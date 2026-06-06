@@ -4,7 +4,6 @@ import { createFromSource } from "fumadocs-core/search/server";
 import {
   getRefMetadata,
   getRefUrl,
-  loadProjectConfig,
   type ScriptoriumProjectConfig
 } from "@scriptorium/core";
 import { buildProjectBundle, readBundleManifest, type BundleManifest } from "@scriptorium/bundle";
@@ -18,17 +17,11 @@ import {
   createRuntimePreparationController,
   getLocalProjectRoot,
   getRuntimeConfig,
-  getRuntimePaths
+  getRuntimePaths,
+  type SourceRuntimeAdapter
 } from "@scriptorium/runtime";
-import {
-  createGitCliStageRepository,
-  createGitHubWebhookHandler,
-  syncGitCliRepository
-} from "@scriptorium/source-git";
-import {
-  createLocalContractWatcher,
-  createLocalStageRepository
-} from "@scriptorium/source-local";
+import { createGitSourceRuntimeAdapter } from "@scriptorium/source-git";
+import { createLocalSourceRuntimeAdapter } from "@scriptorium/source-local";
 import { resolveBundlingCaptions } from "./app/_layout/runtime-warmup-copy";
 
 interface PreparedRuntimeContent {
@@ -40,15 +33,12 @@ interface PreparedRuntimeContent {
   searchIndexPath: string;
 }
 
-function isGitSourceEnabled() {
-  return getRuntimeConfig().source.type === "git";
-}
-
 interface ScriptoriumRuntimeSingleton {
   activePreparedContent: PreparedRuntimeContent | null;
   hydratingPreparedContent: Promise<PreparedRuntimeContent | null> | null;
-  localWatcher: { close(): void } | null;
+  backgroundServiceHandle: { close(): void } | null;
   servicesStarted: boolean;
+  sourceAdapter: SourceRuntimeAdapter;
   runtimePreparationController: ReturnType<typeof createRuntimePreparationController<PreparedRuntimeContent>>;
 }
 
@@ -67,34 +57,38 @@ const readCurrentAsset = createCurrentAssetReader({
   }
 });
 
-const handleGitHubWebhook = createGitHubWebhookHandler({
-  isEnabled: isGitSourceEnabled,
-  getSecret: () => getRuntimeConfig().triggers?.webhook?.secret,
-  refresh: async () => {
-    await singleton.runtimePreparationController.requestPrepare();
+async function handleSourceWebhook(request: Request) {
+  if (!singleton.sourceAdapter.handleWebhook) {
+    return Response.json({ error: "Webhook source is not enabled." }, { status: 404 });
   }
-});
+
+  return singleton.sourceAdapter.handleWebhook(request, {
+    requestPrepare: () => singleton.runtimePreparationController.requestPrepare()
+  });
+}
 
 function ensureRuntimeServices() {
-  if (singleton.servicesStarted)
-    return;
+  if (!singleton.servicesStarted) {
+    singleton.servicesStarted = true;
+    if (singleton.sourceAdapter.shouldHydratePreparedContent()) {
+      void ensureHydratedPreparedContent()
+        .then((prepared) => {
+          if (!prepared) {
+            return singleton.runtimePreparationController.startBackgroundPreparation();
+          }
 
-  singleton.servicesStarted = true;
-  void ensureHydratedPreparedContent()
-    .then((prepared) => {
-      if (!prepared) {
-        return singleton.runtimePreparationController.startBackgroundPreparation();
-      }
+          return null;
+        });
+    }
+  }
 
-      return null;
-    });
+  if (singleton.runtimePreparationController.getStatus().phase === "idle" && !singleton.activePreparedContent) {
+    void singleton.runtimePreparationController.requestPrepare();
+  }
 
-  if (getRuntimeConfig().source.type === "local" && !singleton.localWatcher) {
-    singleton.localWatcher = createLocalContractWatcher({
-      projectRoot: getLocalProjectRoot(),
-      onChange() {
-        void singleton.runtimePreparationController.requestPrepare();
-      }
+  if (!singleton.backgroundServiceHandle && singleton.sourceAdapter.startBackgroundServices) {
+    singleton.backgroundServiceHandle = singleton.sourceAdapter.startBackgroundServices({
+      requestPrepare: () => singleton.runtimePreparationController.requestPrepare()
     });
   }
 }
@@ -119,6 +113,10 @@ async function exportPreparedSearchIndex(source: DocsSource) {
 }
 
 async function ensureHydratedPreparedContent() {
+  if (!singleton.sourceAdapter.shouldHydratePreparedContent()) {
+    return null;
+  }
+
   if (singleton.activePreparedContent)
     return singleton.activePreparedContent;
 
@@ -216,7 +214,7 @@ export async function getPreparedSearchIndex() {
 export async function getRuntimeReadiness() {
   ensureRuntimeServices();
   const readiness = await singleton.runtimePreparationController.getReadiness();
-  if (readiness.ok) {
+  if (readiness.ok || !singleton.sourceAdapter.shouldHydratePreparedContent()) {
     return readiness;
   }
 
@@ -242,52 +240,39 @@ export async function requestRuntimePreparation() {
   await singleton.runtimePreparationController.requestPrepare();
 }
 
-export { buildWorkspaceThemeStylesheet, getRefMetadata, getRefUrl, handleGitHubWebhook, readCurrentAsset };
+export {
+  buildWorkspaceThemeStylesheet,
+  getRefMetadata,
+  getRefUrl,
+  handleSourceWebhook,
+  readCurrentAsset
+};
 export { getLocalProjectRoot, getRuntimeConfig, getRuntimePaths };
 
 ensureRuntimeServices();
 
 function createScriptoriumRuntimeSingleton(): ScriptoriumRuntimeSingleton {
+  const sourceAdapter = createSourceRuntimeAdapter();
+
   return {
     activePreparedContent: null,
     hydratingPreparedContent: null,
-    localWatcher: null,
+    backgroundServiceHandle: null,
     servicesStarted: false,
+    sourceAdapter,
     runtimePreparationController: createRuntimePreparationController<PreparedRuntimeContent>({
       getRuntimeConfig,
-      async prepare({ config, generationDir, generationId, setPhase }) {
+      async prepare({ generationDir, generationId, setPhase }) {
         await mkdir(generationDir, { recursive: true });
         const bundleDir = path.join(generationDir, "bundle");
         const searchIndexPath = path.join(generationDir, "search-index.json");
 
-        let projectRoot: string;
-        if (config.source.type === "git") {
-          if (!config.source.target) {
-            throw new Error("Runtime source.target is not configured for git source mode.");
-          }
-
-          projectRoot = getRuntimePaths().repoDir;
-          await syncGitCliRepository({
-            repoDir: projectRoot,
-            repoUrl: config.source.target,
-            defaultBranch: config.source.defaultBranch,
-            authToken: config.source.auth?.token,
-            authUsername: config.source.auth?.username
-          });
-
-          await buildProjectBundle({
-            projectRoot,
-            outputDir: bundleDir,
-            repository: createGitCliStageRepository(projectRoot)
-          });
-        } else {
-          projectRoot = getLocalProjectRoot();
-          await buildProjectBundle({
-            projectRoot,
-            outputDir: bundleDir,
-            repository: createLocalStageRepository(projectRoot)
-          });
-        }
+        const { projectRoot, repository } = await sourceAdapter.prepareRepository();
+        await buildProjectBundle({
+          projectRoot,
+          outputDir: bundleDir,
+          repository
+        });
 
         const bundle = await readBundleManifest(projectRoot, bundleDir);
 
@@ -315,19 +300,19 @@ function createScriptoriumRuntimeSingleton(): ScriptoriumRuntimeSingleton {
 }
 
 async function loadBundlingProjectConfig(): Promise<ScriptoriumProjectConfig | null> {
+  return singleton.sourceAdapter.loadProjectConfigForWarmup();
+}
+
+function createSourceRuntimeAdapter() {
   const config = getRuntimeConfig();
-
-  if (config.source.type === "local") {
-    try {
-      return await loadProjectConfig(getLocalProjectRoot());
-    } catch {
-      return null;
-    }
+  if (config.source.type === "git") {
+    return createGitSourceRuntimeAdapter({
+      getRuntimeConfig,
+      getRuntimePaths
+    });
   }
 
-  try {
-    return await loadProjectConfig(getRuntimePaths().repoDir);
-  } catch {
-    return null;
-  }
+  return createLocalSourceRuntimeAdapter({
+    getLocalProjectRoot
+  });
 }

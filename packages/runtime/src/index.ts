@@ -6,3 +6,7 @@ export {
   type RuntimeReadiness,
   type RuntimeReadinessStatus
 } from "./runtime/runtime-preparation-controller";
+export {
+  type SourceRuntimeAdapter,
+  type SourceRuntimeAdapterCallbacks
+} from "./runtime/source-runtime-adapter";

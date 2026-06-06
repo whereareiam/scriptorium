@@ -29,8 +29,6 @@
         "@scriptorium/runtime": "workspace:*",
         "@scriptorium/source-git": "workspace:*",
         "@scriptorium/source-local": "workspace:*",
-        "@scriptorium/trigger": "workspace:*",
-        "@scriptorium/trigger-webhook": "workspace:*",
         "@scriptorium/ui": "workspace:*",
         "fumadocs-core": "^16.8.5",
         "fumadocs-ui": "^16.8.5",
@@ -77,7 +75,6 @@
     "packages/runtime": {
       "name": "@scriptorium/runtime",
       "dependencies": {
-        "@scriptorium/bundle": "workspace:*",
         "@scriptorium/core": "workspace:*",
       },
     },
@@ -85,22 +82,14 @@
       "name": "@scriptorium/source-git",
       "dependencies": {
         "@scriptorium/core": "workspace:*",
+        "@scriptorium/runtime": "workspace:*",
       },
     },
     "packages/source-local": {
       "name": "@scriptorium/source-local",
       "dependencies": {
         "@scriptorium/core": "workspace:*",
-        "@scriptorium/source-git": "workspace:*",
-      },
-    },
-    "packages/trigger": {
-      "name": "@scriptorium/trigger",
-    },
-    "packages/trigger-webhook": {
-      "name": "@scriptorium/trigger-webhook",
-      "dependencies": {
-        "@scriptorium/trigger": "workspace:*",
+        "@scriptorium/runtime": "workspace:*",
       },
     },
     "packages/ui": {
@@ -293,10 +282,6 @@
     "@scriptorium/source-git": ["@scriptorium/source-git@workspace:packages/source-git"],
 
     "@scriptorium/source-local": ["@scriptorium/source-local@workspace:packages/source-local"],
-
-    "@scriptorium/trigger": ["@scriptorium/trigger@workspace:packages/trigger"],
-
-    "@scriptorium/trigger-webhook": ["@scriptorium/trigger-webhook@workspace:packages/trigger-webhook"],
 
     "@scriptorium/ui": ["@scriptorium/ui@workspace:packages/ui"],
 

@@ -7,8 +7,10 @@ export function createLocalContractWatcher(options: {
   projectRoot: string;
   onChange: () => void;
   debounceMs?: number;
+  watchFactory?: typeof watch;
 }) {
   const debounceMs = options.debounceMs ?? 150;
+  const watchFactory = options.watchFactory ?? watch;
   const watchers = new Map<string, FSWatcher>();
   let closed = false;
   let debounceHandle: ReturnType<typeof setTimeout> | undefined;
@@ -65,7 +67,7 @@ export function createLocalContractWatcher(options: {
         continue;
 
       try {
-        const watcher = watch(dir, { persistent: false }, (_, fileName) => {
+        const watcher = watchFactory(dir, { persistent: false }, (_, fileName) => {
           if (fileName && !matchesContractPath(options.projectRoot, path.join(dir, fileName.toString()))) {
             scheduleRefresh();
             return;

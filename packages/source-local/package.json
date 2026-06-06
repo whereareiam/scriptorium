@@ -6,6 +6,6 @@
   },
   "dependencies": {
     "@scriptorium/core": "workspace:*",
-    "@scriptorium/source-git": "workspace:*"
+    "@scriptorium/runtime": "workspace:*"
   }
 }

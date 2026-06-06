@@ -30,7 +30,8 @@ export async function exportVersion(projectRoot: string, repository: StageReposi
   for (const filePath of files) {
     const destination = resolveBundledDestination(filePath, versionRoot, projectRoot, repository.repoRoot);
     await mkdir(path.dirname(destination), { recursive: true });
-    await writeFile(destination, await repository.readFile(ref.fullName, filePath));
+    const content = await repository.readFile(ref.fullName, filePath);
+    await writeFile(destination, content);
   }
 
   return {

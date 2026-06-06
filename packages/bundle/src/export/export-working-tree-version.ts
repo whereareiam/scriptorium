@@ -8,7 +8,8 @@ export async function exportWorkingTreeVersion(projectRoot: string, versionName:
   const { configPath, docsAssetsDir, docsContentDir } = resolveProjectPaths(projectRoot);
 
   await mkdir(versionRoot, { recursive: true });
-  await cp(docsContentDir, path.join(versionRoot, "content"), { recursive: true });
+  const bundledContentDir = path.join(versionRoot, "content");
+  await cp(docsContentDir, bundledContentDir, { recursive: true });
 
   try {
     await cp(docsAssetsDir, path.join(versionRoot, "assets"), { recursive: true });

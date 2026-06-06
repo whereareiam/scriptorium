@@ -5,6 +5,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@scriptorium/core": "workspace:*"
+    "@scriptorium/core": "workspace:*",
+    "@scriptorium/runtime": "workspace:*"
   }
 }

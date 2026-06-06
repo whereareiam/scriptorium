@@ -14,21 +14,30 @@ describe("createLocalContractWatcher", () => {
   it("triggers for contract file changes and ignores unrelated files", async () => {
     const projectRoot = await createProjectRoot();
     let changes = 0;
+    const listeners = new Map<string, (eventType: string, fileName: string | Buffer | null) => void>();
     const watcher = createLocalContractWatcher({
       projectRoot,
       debounceMs: 50,
       onChange() {
         changes += 1;
+      },
+      watchFactory(dir, _options, listener) {
+        listeners.set(dir, listener);
+        return {
+          close() {
+            listeners.delete(dir);
+          }
+        } as never;
       }
     });
 
     await wait(100);
-    await writeFile(path.join(projectRoot, "notes.md"), "# ignored\n");
+    listeners.get(projectRoot)?.("change", "notes.md");
     await wait(200);
     expect(changes).toBe(0);
 
-    await writeFile(path.join(projectRoot, "docs", "content", "index.mdx"), "# changed\n");
-    await wait(250);
+    listeners.get(path.join(projectRoot, "docs", "content"))?.("change", "guide.mdx");
+    await waitFor(() => changes === 1, 1500);
     watcher.close();
 
     expect(changes).toBe(1);
@@ -52,4 +61,16 @@ function wait(ms: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+async function waitFor(predicate: () => boolean, timeoutMs: number) {
+  const startedAt = Date.now();
+
+  while (!predicate()) {
+    if (Date.now() - startedAt > timeoutMs) {
+      break;
+    }
+
+    await wait(50);
+  }
 }
