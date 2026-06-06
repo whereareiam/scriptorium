@@ -2,6 +2,7 @@ export { assertProjectStructure } from "./project/project-structure";
 export {
   loadProjectConfig,
   projectConfigSchema,
+  type ProjectLink,
   type PublishedVersionIncludeRule,
   type RefMetadata,
   type ScriptoriumProjectConfig

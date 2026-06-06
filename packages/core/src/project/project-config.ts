@@ -41,30 +41,61 @@ const publishedVersionsSchema = z.object({
   meta: z.record(z.string(), refMetadataSchema).default({})
 });
 
-const projectUrlsSchema = z.object({
-  github: z.string().min(1).optional()
-}).optional();
+const projectLinkTargetSchema = z.object({
+  url: z.string().min(1),
+  external: z.boolean().optional(),
+  on: z.enum(["menu", "nav", "all"]).optional(),
+  active: z.enum(["url", "nested-url", "none"]).optional()
+});
 
-const projectBundlingStateSchema = z.object({
-  captions: z.array(z.string().trim().min(1)).min(1).optional()
-}).optional();
+const projectMainLinkSchema = projectLinkTargetSchema.extend({
+  type: z.literal("main"),
+  text: z.string().min(1),
+  icon: z.string().min(1).optional(),
+  description: z.string().min(1).optional()
+});
 
-const projectStateSchema = z.object({
-  bundling: projectBundlingStateSchema.optional()
-}).optional();
+const projectButtonLinkSchema = projectLinkTargetSchema.extend({
+  type: z.literal("button"),
+  text: z.string().min(1),
+  icon: z.string().min(1).optional(),
+  secondary: z.boolean().optional()
+});
+
+const projectIconLinkSchema = projectLinkTargetSchema.extend({
+  type: z.literal("icon"),
+  icon: z.string().min(1),
+  label: z.string().min(1),
+  text: z.string().min(1).optional(),
+  secondary: z.boolean().optional()
+});
+
+const projectLinksSchema = z.array(
+  z.discriminatedUnion("type", [
+    projectMainLinkSchema,
+    projectButtonLinkSchema,
+    projectIconLinkSchema
+  ])
+).optional();
 
 export const projectConfigSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1).optional(),
   logo: z.string().min(1),
   favicon: z.string().min(1).optional(),
-  state: projectStateSchema,
-  urls: projectUrlsSchema,
+  state: z.object({
+    bundling: z.object({
+      captions: z.array(z.string().trim().min(1)).min(1).optional()
+    }).optional()
+  }).optional(),
+  urls: z.record(z.string(), z.string().min(1)).optional(),
+  links: projectLinksSchema,
   versions: publishedVersionsSchema
 });
 
 export type PublishedVersionIncludeRule = z.infer<typeof publishedVersionIncludeRuleSchema>;
 export type RefMetadata = z.infer<typeof refMetadataSchema>;
+export type ProjectLink = NonNullable<z.infer<typeof projectLinksSchema>>[number];
 export type ScriptoriumProjectConfig = z.infer<typeof projectConfigSchema>;
 
 export async function loadProjectConfig(projectRoot = process.cwd()) {

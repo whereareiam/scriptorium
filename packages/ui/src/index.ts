@@ -11,3 +11,4 @@ export {
   type MavenVersionLinkProps,
   MavenVersionLink
 } from "./ui/maven-version-link";
+export { createProjectLinkIcon } from "./ui/project-links";
