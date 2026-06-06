@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  nextBundlingCaptionIndex,
+  resolveBundlingCaption
+} from "./runtime-warmup-copy";
 
 interface ReadinessResponse {
   ok: boolean;
@@ -8,11 +12,12 @@ interface ReadinessResponse {
   error?: string;
 }
 
-export function RuntimeWarmupScreen() {
+export function RuntimeWarmupScreen({ captions }: { captions?: string[] }) {
   const [status, setStatus] = useState<ReadinessResponse>({
     ok: false,
     phase: "bundling"
   });
+  const [captionIndex, setCaptionIndex] = useState(0);
 
   useEffect(() => {
     let disposed = false;
@@ -51,12 +56,28 @@ export function RuntimeWarmupScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    setCaptionIndex(0);
+  }, [captions]);
+
+  useEffect(() => {
+    if (!captions || captions.length <= 1 || status.phase === "error") {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setCaptionIndex((currentIndex) => nextBundlingCaptionIndex(currentIndex, captions));
+    }, 3500);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [captions, status.phase]);
+
   const hasError = status.phase === "error";
-  const statusText = status.phase === "preparing-content"
-    ? "Content is being prepared."
-    : status.phase === "preparing-search"
-      ? "Search is being prepared."
-      : "The latest content is being bundled. This page will refresh automatically.";
+  const caption = captions && captions.length > 0
+    ? resolveBundlingCaption(captions, captionIndex)
+    : undefined;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-fd-background px-6 text-fd-foreground">
@@ -72,7 +93,7 @@ export function RuntimeWarmupScreen() {
           <p className="text-sm leading-6 text-fd-muted-foreground">
             {hasError
               ? status.error ?? "The latest bundle could not be built."
-              : statusText}
+              : caption ?? "The latest content is being bundled. This page will refresh automatically."}
           </p>
         </div>
       </div>

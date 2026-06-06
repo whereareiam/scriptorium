@@ -3,7 +3,15 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { RuntimeWarmupScreen } from "./runtime-warmup-screen";
 
-export function RuntimeReadinessGuard({ children }: { children: ReactNode }) {
+export function RuntimeReadinessGuard(
+  {
+    captions,
+    children
+  }: {
+    captions: string[];
+    children: ReactNode;
+  }
+) {
   const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
@@ -41,7 +49,7 @@ export function RuntimeReadinessGuard({ children }: { children: ReactNode }) {
   }, [blocked]);
 
   if (blocked) {
-    return <RuntimeWarmupScreen />;
+    return <RuntimeWarmupScreen captions={captions} />;
   }
 
   return <>{children}</>;

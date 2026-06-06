@@ -1,7 +1,12 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createFromSource } from "fumadocs-core/search/server";
-import { getRefMetadata, getRefUrl } from "@scriptorium/core";
+import {
+  getRefMetadata,
+  getRefUrl,
+  loadProjectConfig,
+  type ScriptoriumProjectConfig
+} from "@scriptorium/core";
 import { buildProjectBundle, readBundleManifest, type BundleManifest } from "@scriptorium/bundle";
 import {
   buildWorkspaceThemeStylesheet,
@@ -24,6 +29,7 @@ import {
   createLocalContractWatcher,
   createLocalStageRepository
 } from "@scriptorium/source-local";
+import { resolveBundlingCaptions } from "./app/_layout/runtime-warmup-copy";
 
 interface PreparedRuntimeContent {
   generationId: string;
@@ -175,6 +181,17 @@ export async function getProjectConfig() {
   return getActivePreparedContent().bundle.project;
 }
 
+export async function getBundlingCaptions() {
+  ensureRuntimeServices();
+
+  const hydrated = await ensureHydratedPreparedContent();
+  if (hydrated) {
+    return resolveBundlingCaptions(hydrated.bundle.project);
+  }
+
+  return resolveBundlingCaptions(await loadBundlingProjectConfig());
+}
+
 export async function getPublishedVersions() {
   ensureRuntimeServices();
   await ensureHydratedPreparedContent();
@@ -295,4 +312,22 @@ function createScriptoriumRuntimeSingleton(): ScriptoriumRuntimeSingleton {
       }
     })
   };
+}
+
+async function loadBundlingProjectConfig(): Promise<ScriptoriumProjectConfig | null> {
+  const config = getRuntimeConfig();
+
+  if (config.source.type === "local") {
+    try {
+      return await loadProjectConfig(getLocalProjectRoot());
+    } catch {
+      return null;
+    }
+  }
+
+  try {
+    return await loadProjectConfig(getRuntimePaths().repoDir);
+  } catch {
+    return null;
+  }
 }

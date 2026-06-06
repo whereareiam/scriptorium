@@ -45,11 +45,20 @@ const projectUrlsSchema = z.object({
   github: z.string().min(1).optional()
 }).optional();
 
+const projectBundlingStateSchema = z.object({
+  captions: z.array(z.string().trim().min(1)).min(1).optional()
+}).optional();
+
+const projectStateSchema = z.object({
+  bundling: projectBundlingStateSchema.optional()
+}).optional();
+
 export const projectConfigSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1).optional(),
   logo: z.string().min(1),
   favicon: z.string().min(1).optional(),
+  state: projectStateSchema,
   urls: projectUrlsSchema,
   versions: publishedVersionsSchema
 });

@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { RootProvider } from "fumadocs-ui/provider/next";
-import { buildWorkspaceThemeStylesheet, getProjectConfig, getRuntimeReadiness } from "@/scriptorium";
+import {
+  buildWorkspaceThemeStylesheet,
+  getBundlingCaptions,
+  getProjectConfig,
+  getRuntimeReadiness
+} from "@/scriptorium";
 import { RuntimeReadinessGuard } from "./_layout/runtime-readiness-guard";
 import { SearchDialog } from "./_layout/search-dialog";
 import { resolveProjectAssetUrl, resolveProjectFaviconUrl } from "./_layout/project-assets";
@@ -39,11 +44,12 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const readiness = await getRuntimeReadiness();
   if (!readiness.ok) {
+    const captions = await getBundlingCaptions();
     return (
       <html lang="en" suppressHydrationWarning>
         <body className="min-h-screen bg-fd-background text-fd-foreground" suppressHydrationWarning>
           <RootProvider>
-            <RuntimeWarmupScreen />
+            <RuntimeWarmupScreen captions={captions} />
           </RootProvider>
         </body>
       </html>
@@ -51,6 +57,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   }
 
   const project = await getProjectConfig();
+  const captions = await getBundlingCaptions();
   const workspaceThemeCss = buildWorkspaceThemeStylesheet(project);
 
   return (
@@ -58,7 +65,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <WorkspaceBody>
         {workspaceThemeCss ? <style>{workspaceThemeCss}</style> : null}
         <RootProvider search={{ SearchDialog }}>
-          <RuntimeReadinessGuard>{children}</RuntimeReadinessGuard>
+          <RuntimeReadinessGuard captions={captions}>{children}</RuntimeReadinessGuard>
         </RootProvider>
       </WorkspaceBody>
     </html>
