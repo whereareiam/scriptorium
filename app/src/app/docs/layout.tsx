@@ -22,6 +22,7 @@ export default async function DocsRootLayout({ children }: { children: ReactNode
     <DocsLayout
       tree={source.getPageTree()}
       githubUrl={project.urls?.github}
+      themeSwitch={{ mode: "light-dark-system" }}
       tabs={versions.map((version: BundledVersion) => ({
         title: getRefMetadata(project, version.name).label,
         url: getRefUrl(source, version.name)
