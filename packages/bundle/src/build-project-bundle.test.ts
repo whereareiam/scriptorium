@@ -115,7 +115,7 @@ describe("buildProjectBundle", () => {
     const { projectRoot } = await createFixtureRepo();
     const manifest = await buildProjectBundle({
       projectRoot,
-      repository: createGitCliStageRepository(projectRoot)
+      repository: await createGitCliStageRepository(projectRoot)
     });
 
     expect(manifest.versions.map((version) => version.name)).toEqual([
@@ -136,7 +136,7 @@ describe("buildProjectBundle", () => {
     const { projectRoot } = await createFixtureRepo();
     await buildProjectBundle({
       projectRoot,
-      repository: createGitCliStageRepository(projectRoot)
+      repository: await createGitCliStageRepository(projectRoot)
     });
     const { getSource } = createDocsSourceAccess((root = projectRoot) => readBundleManifest(root));
     const { source } = await getSource(projectRoot);
@@ -176,7 +176,7 @@ describe("buildProjectBundle", () => {
 
     await buildProjectBundle({
       projectRoot,
-      repository: createGitCliStageRepository(projectRoot)
+      repository: await createGitCliStageRepository(projectRoot)
     });
 
     const { getSource } = createDocsSourceAccess((root = projectRoot) => readBundleManifest(root));
@@ -238,11 +238,11 @@ describe("buildProjectBundle", () => {
     const [left, right] = await Promise.all([
       buildProjectBundle({
         projectRoot,
-        repository: createGitCliStageRepository(projectRoot)
+        repository: await createGitCliStageRepository(projectRoot)
       }),
       buildProjectBundle({
         projectRoot,
-        repository: createGitCliStageRepository(projectRoot)
+        repository: await createGitCliStageRepository(projectRoot)
       })
     ]);
 
