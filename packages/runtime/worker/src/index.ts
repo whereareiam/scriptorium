@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { buildProjectBundle, readBundleManifest, type BundleManifest } from "@scriptorium/bundle";
-import { type DocsSource } from "@scriptorium/content";
+import type { AdvancedIndex } from "fumadocs-core/search/server";
 import {
   createRuntimePreparationController,
   getRuntimeConfig,
@@ -16,6 +16,7 @@ export {
 } from "./worker-supervisor";
 export { createSourceAdapter } from "./source-adapter";
 export {
+  collectPreparedSearchIndexes,
   exportPreparedSearchIndex,
   hydratePreparedContent,
   loadPreparedSource,
@@ -36,8 +37,8 @@ export type {
 export function runRuntimeWorker(options: {
   createSourceAdapter: () => SourceRuntimeAdapter;
   getRuntimeInstanceId: () => string;
-  loadPreparedSource: (bundle: BundleManifest) => Promise<DocsSource>;
-  exportPreparedSearchIndex: (source: DocsSource) => Promise<string>;
+  collectPreparedSearchIndexes: (bundle: BundleManifest) => Promise<AdvancedIndex[]>;
+  exportPreparedSearchIndex: (indexes: AdvancedIndex[]) => Promise<string>;
 }) {
   const sourceAdapter = options.createSourceAdapter();
   const preparationController = createRuntimePreparationController<void>({
@@ -58,10 +59,10 @@ export function runRuntimeWorker(options: {
       const bundle = await readBundleManifest(projectRoot, bundleDir);
 
       setPhase("preparing-content");
-      const source = await options.loadPreparedSource(bundle);
+      const indexes = await options.collectPreparedSearchIndexes(bundle);
 
       setPhase("preparing-search");
-      const searchPayload = await options.exportPreparedSearchIndex(source);
+      const searchPayload = await options.exportPreparedSearchIndex(indexes);
       await writeFile(searchIndexPath, searchPayload);
     },
     activate: async () => undefined
