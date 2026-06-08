@@ -33,13 +33,6 @@ export function resolveGenerationPaths(generationId: string) {
 export async function loadPreparedSource(bundle: BundleManifest) {
   const sourceAccess = createDocsSourceAccess(async () => bundle);
   const { source } = await sourceAccess.getSource(bundle.projectRoot);
-
-  await Promise.all(source.getPages().map(async (page) => {
-    if ("load" in page.data && typeof page.data.load === "function") {
-      await page.data.load();
-    }
-  }));
-
   return source;
 }
 
