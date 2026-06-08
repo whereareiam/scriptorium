@@ -1,10 +1,8 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import path from "node:path";
 import type { SourceRuntimeAdapter } from "@scriptorium/runtime";
-import { getRuntimeInstanceId } from "../instance-id";
-import type { WorkerCommand, WorkerMessage } from "./protocol";
+import type { WorkerCommand, WorkerMessage } from "./worker-protocol";
 
-interface WorkerProcess {
+export interface WorkerProcess {
   connected: boolean;
   killed: boolean;
   kill(signal?: NodeJS.Signals | number): boolean;
@@ -16,7 +14,9 @@ interface WorkerProcess {
 
 export function createWorkerSupervisor(options: {
   sourceAdapter: SourceRuntimeAdapter;
-  spawnWorker?: () => WorkerProcess;
+  workerEntryPath: string;
+  instanceId: string;
+  spawnWorker?: (workerEntryPath: string, instanceId: string) => WorkerProcess;
 }) {
   const spawnWorker = options.spawnWorker ?? createWorkerProcess;
   let backgroundServiceHandle: { close(): void } | null = null;
@@ -75,7 +75,7 @@ export function createWorkerSupervisor(options: {
       return;
     }
 
-    child = spawnWorker();
+    child = spawnWorker(options.workerEntryPath, options.instanceId);
     childOnline = false;
 
     child.on("message", (message) => {
@@ -132,13 +132,12 @@ export function createWorkerSupervisor(options: {
   };
 }
 
-function createWorkerProcess(): WorkerProcess {
-  const workerEntryPath = path.resolve(process.cwd(), "src", "scriptorium", "worker", "entry.ts");
+function createWorkerProcess(workerEntryPath: string, instanceId: string): WorkerProcess {
   const child = spawn("bun", [workerEntryPath], {
     cwd: process.cwd(),
     env: {
       ...process.env,
-      SCRIPTORIUM_RUNTIME_INSTANCE_ID: getRuntimeInstanceId()
+      SCRIPTORIUM_RUNTIME_INSTANCE_ID: instanceId
     },
     stdio: ["ignore", "inherit", "inherit", "ipc"]
   }) as ChildProcess;

@@ -1,4 +1,5 @@
 import path from "node:path";
+import { readFile } from "node:fs/promises";
 import {
   getRefMetadata,
   getRefUrl,
@@ -12,17 +13,19 @@ import {
   getLocalProjectRoot,
   getRuntimeConfig,
   getRuntimePaths,
-  type RuntimeReadiness
+  type RuntimePhase,
+  type RuntimeReadiness,
+  type RuntimeReadinessStatus
 } from "@scriptorium/runtime";
-import { resolveBundlingCaptions } from "./app/_layout/runtime-warmup-copy";
 import {
+  createSourceAdapter,
+  createWorkerSupervisor,
+  getRuntimeInstanceId,
   hydratePreparedContent,
   readPreparedSearchIndex,
   type PreparedRuntimeContent
-} from "./scriptorium/prepared-content";
-import { readPersistedState, toRuntimeReadiness } from "./scriptorium/persisted-state";
-import { createSourceAdapter } from "./scriptorium/source-adapter";
-import { createWorkerSupervisor } from "./scriptorium/worker/supervisor";
+} from "@scriptorium/runtime-worker";
+import { resolveBundlingCaptions } from "./app/_layout/runtime-warmup-copy";
 
 interface ScriptoriumRuntimeSingleton {
   activePreparedContent: PreparedRuntimeContent | null;
@@ -38,6 +41,10 @@ const globalRuntime = globalThis as typeof globalThis & {
 };
 
 const singleton = globalRuntime.__scriptoriumRuntime ??= createScriptoriumRuntimeSingleton();
+
+interface PersistedState extends RuntimeReadinessStatus {
+  instanceId?: string;
+}
 
 const readCurrentAsset = createCurrentAssetReader({
   async getCurrentAssetsDir(projectRoot) {
@@ -181,11 +188,38 @@ function createScriptoriumRuntimeSingleton(): ScriptoriumRuntimeSingleton {
     servicesStarted: false,
     sourceAdapter,
     workerSupervisor: createWorkerSupervisor({
-      sourceAdapter
+      sourceAdapter,
+      workerEntryPath: path.resolve(process.cwd(), "scriptorium-worker.mjs"),
+      instanceId: getRuntimeInstanceId()
     })
   };
 }
 
 async function loadBundlingProjectConfig(): Promise<ScriptoriumProjectConfig | null> {
   return singleton.sourceAdapter.loadProjectConfigForWarmup();
+}
+
+async function readPersistedState() {
+  try {
+    const raw = await readFile(getRuntimePaths().stateFile, "utf8");
+    return JSON.parse(raw) as PersistedState;
+  } catch {
+    return null;
+  }
+}
+
+function toRuntimeReadiness(state: PersistedState | null): RuntimeReadiness {
+  const phase: RuntimePhase = state?.phase ?? "idle";
+
+  return {
+    ok: phase === "ready",
+    status: {
+      phase,
+      startedAt: state?.startedAt,
+      finishedAt: state?.finishedAt,
+      lastSuccessfulPreparedAt: state?.lastSuccessfulPreparedAt,
+      activeGenerationId: state?.activeGenerationId,
+      error: state?.error
+    }
+  };
 }

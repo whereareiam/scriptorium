@@ -6,9 +6,10 @@ It contains:
 
 - `app/`: the Scriptorium Next.js app
 - `packages/core/`: shared contracts, project config, and version metadata helpers
-- `packages/source-git/`: git-backed source implementation
+- `packages/runtime/source-git/`: git-backed runtime source implementation
 - `packages/bundle/`: normalized bundle generation from a source
 - `packages/runtime/`: runtime config, generation lifecycle, and readiness helpers
+- `packages/runtime/worker/`: background preparation worker orchestration
 - `packages/content/`: bundled content access, docs-source helpers, and theme helpers
 - `packages/ui/`: Scriptorium-specific React/UI helpers
 - `example/`: a minimal consumer-shaped fixture used for local development

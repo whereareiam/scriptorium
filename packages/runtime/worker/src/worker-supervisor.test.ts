@@ -1,8 +1,8 @@
 import { EventEmitter } from "node:events";
 import { afterEach, describe, expect, it } from "bun:test";
 import type { SourceRuntimeAdapter } from "@scriptorium/runtime";
-import { createWorkerSupervisor } from "./supervisor";
-import type { WorkerCommand, WorkerMessage } from "./protocol";
+import { createWorkerSupervisor } from "./worker-supervisor";
+import type { WorkerCommand, WorkerMessage } from "./worker-protocol";
 
 class FakeWorkerProcess extends EventEmitter {
   connected = true;
@@ -40,6 +40,8 @@ describe("createWorkerSupervisor", () => {
   it("starts with one eager prepare request", async () => {
     const supervisor = createWorkerSupervisor({
       sourceAdapter: createSourceAdapterStub(),
+      workerEntryPath: "/tmp/worker.mjs",
+      instanceId: "instance-1",
       spawnWorker() {
         const worker = new FakeWorkerProcess();
         createdWorkers.push(worker);
@@ -58,6 +60,8 @@ describe("createWorkerSupervisor", () => {
   it("coalesces repeated prepare requests while a run is active", async () => {
     const supervisor = createWorkerSupervisor({
       sourceAdapter: createSourceAdapterStub(),
+      workerEntryPath: "/tmp/worker.mjs",
+      instanceId: "instance-1",
       spawnWorker() {
         const worker = new FakeWorkerProcess();
         createdWorkers.push(worker);
@@ -85,6 +89,8 @@ describe("createWorkerSupervisor", () => {
   it("respawns and retries when the child exits during an active prepare", async () => {
     const supervisor = createWorkerSupervisor({
       sourceAdapter: createSourceAdapterStub(),
+      workerEntryPath: "/tmp/worker.mjs",
+      instanceId: "instance-1",
       spawnWorker() {
         const worker = new FakeWorkerProcess();
         createdWorkers.push(worker);

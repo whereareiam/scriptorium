@@ -6,8 +6,8 @@ import {
   type SourceRuntimeAdapter,
   type SourceRuntimeAdapterFactories
 } from "@scriptorium/runtime";
-import { createGitSourceRuntimeAdapter } from "@scriptorium/source-git";
-import { createLocalSourceRuntimeAdapter } from "@scriptorium/source-local";
+import { createGitSourceRuntimeAdapter } from "@scriptorium/runtime-source-git";
+import { createLocalSourceRuntimeAdapter } from "@scriptorium/runtime-source-local";
 
 const sourceAdapters = {
   git() {

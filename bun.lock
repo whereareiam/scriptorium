@@ -27,8 +27,9 @@
         "@scriptorium/content": "workspace:*",
         "@scriptorium/core": "workspace:*",
         "@scriptorium/runtime": "workspace:*",
-        "@scriptorium/source-git": "workspace:*",
-        "@scriptorium/source-local": "workspace:*",
+        "@scriptorium/runtime-source-git": "workspace:*",
+        "@scriptorium/runtime-source-local": "workspace:*",
+        "@scriptorium/runtime-worker": "workspace:*",
         "@scriptorium/ui": "workspace:*",
         "fumadocs-core": "^16.8.5",
         "fumadocs-ui": "^16.8.5",
@@ -49,7 +50,7 @@
       "name": "@scriptorium/bundle",
       "dependencies": {
         "@scriptorium/core": "workspace:*",
-        "@scriptorium/source-local": "workspace:*",
+        "@scriptorium/runtime-source-local": "workspace:*",
       },
     },
     "packages/content": {
@@ -78,24 +79,33 @@
         "@scriptorium/core": "workspace:*",
       },
     },
-    "packages/source-git": {
-      "name": "@scriptorium/source-git",
+    "packages/runtime/source-git": {
+      "name": "@scriptorium/runtime-source-git",
       "dependencies": {
         "@scriptorium/core": "workspace:*",
         "@scriptorium/runtime": "workspace:*",
       },
     },
-    "packages/source-local": {
-      "name": "@scriptorium/source-local",
+    "packages/runtime/source-local": {
+      "name": "@scriptorium/runtime-source-local",
       "dependencies": {
         "@scriptorium/core": "workspace:*",
         "@scriptorium/runtime": "workspace:*",
+      },
+    },
+    "packages/runtime/worker": {
+      "name": "@scriptorium/runtime-worker",
+      "dependencies": {
+        "@scriptorium/bundle": "workspace:*",
+        "@scriptorium/content": "workspace:*",
+        "@scriptorium/runtime": "workspace:*",
+        "@scriptorium/runtime-source-git": "workspace:*",
+        "@scriptorium/runtime-source-local": "workspace:*",
       },
     },
     "packages/ui": {
       "name": "@scriptorium/ui",
       "dependencies": {
-        "@scriptorium/core": "workspace:*",
         "fumadocs-ui": "^16.8.5",
         "lucide-react": "^1.12.0",
         "react": "^19.2.5",
@@ -280,9 +290,11 @@
 
     "@scriptorium/runtime": ["@scriptorium/runtime@workspace:packages/runtime"],
 
-    "@scriptorium/source-git": ["@scriptorium/source-git@workspace:packages/source-git"],
+    "@scriptorium/runtime-source-git": ["@scriptorium/runtime-source-git@workspace:packages/runtime/source-git"],
 
-    "@scriptorium/source-local": ["@scriptorium/source-local@workspace:packages/source-local"],
+    "@scriptorium/runtime-source-local": ["@scriptorium/runtime-source-local@workspace:packages/runtime/source-local"],
+
+    "@scriptorium/runtime-worker": ["@scriptorium/runtime-worker@workspace:packages/runtime/worker"],
 
     "@scriptorium/ui": ["@scriptorium/ui@workspace:packages/ui"],
 

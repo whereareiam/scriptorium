@@ -1,5 +1,5 @@
 {
-  "name": "@scriptorium/source-git",
+  "name": "@scriptorium/runtime-source-git",
   "private": true,
   "exports": {
     ".": "./src/index.ts"

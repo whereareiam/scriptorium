@@ -4,15 +4,17 @@
   "packageManager": "bun@1.3.13",
   "workspaces": [
     "app",
-    "packages/*"
+    "packages/*",
+    "packages/runtime/*"
   ],
   "scripts": {
     "dev": "bun run --cwd app dev",
     "dev:local": "bun run --cwd app dev",
     "dev:built": "bun run --cwd app dev:built",
-    "build": "bun run --cwd app build",
+    "build": "bun run --cwd app build && bun run build:worker",
+    "build:worker": "bun build ./packages/runtime/worker/src/entry.ts --outfile ./app/.next/standalone/app/scriptorium-worker.mjs --target bun",
     "typecheck": "bun run --cwd app typecheck",
-    "validate": "bun test && bun run --cwd app typecheck && bun run --cwd app build",
+    "validate": "bun test && bun run --cwd app typecheck && bun run build",
     "test": "bun test"
   },
   "devDependencies": {

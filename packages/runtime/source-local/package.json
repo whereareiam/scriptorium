@@ -1,5 +1,5 @@
 {
-  "name": "@scriptorium/source-local",
+  "name": "@scriptorium/runtime-source-local",
   "private": true,
   "exports": {
     ".": "./src/index.ts"

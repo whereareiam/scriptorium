@@ -11,9 +11,10 @@ const config = {
     "@scriptorium/content",
     "@scriptorium/core",
     "@scriptorium/bundle",
-    "@scriptorium/source-git",
-    "@scriptorium/source-local",
+    "@scriptorium/runtime-source-git",
+    "@scriptorium/runtime-source-local",
     "@scriptorium/runtime",
+    "@scriptorium/runtime-worker",
     "@scriptorium/ui"
   ],
   outputFileTracingRoot: path.join(__dirname, "..")

@@ -1,0 +1,14 @@
+{
+  "name": "@scriptorium/runtime-worker",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@scriptorium/bundle": "workspace:*",
+    "@scriptorium/content": "workspace:*",
+    "@scriptorium/runtime": "workspace:*",
+    "@scriptorium/runtime-source-git": "workspace:*",
+    "@scriptorium/runtime-source-local": "workspace:*"
+  }
+}
