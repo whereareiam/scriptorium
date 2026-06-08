@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { createSearchAPI, type AdvancedIndex } from "fumadocs-core/search/server";
+import { create, insertMultiple, save } from "@orama/orama";
+import type { AdvancedIndex } from "fumadocs-core/search/server";
 import { readBundleManifest, type BundleManifest } from "@scriptorium/bundle";
 import {
   createDocsSourceAccess,
@@ -36,8 +37,31 @@ export async function loadPreparedSource(bundle: BundleManifest) {
   return source;
 }
 
-export async function collectPreparedSearchIndexes(bundle: BundleManifest) {
-  const indexes: AdvancedIndex[] = [];
+const preparedSearchSchema = {
+  content: "string",
+  page_id: "string",
+  type: "string",
+  breadcrumbs: "string[]",
+  tags: "enum[]",
+  url: "string",
+  embeddings: "vector[512]"
+} as const;
+
+export type PreparedSearchDatabase = ReturnType<typeof create<typeof preparedSearchSchema>>;
+type PreparedSearchDocument = {
+  id: string;
+  page_id: string;
+  type: "page" | "text" | "heading";
+  content: string;
+  breadcrumbs?: string[];
+  tags: string[];
+  url: string;
+};
+
+export async function buildPreparedSearchDatabase(bundle: BundleManifest) {
+  const searchDatabase = create({
+    schema: preparedSearchSchema
+  });
 
   for (const version of bundle.versions) {
     const source = await loadPreparedSource({
@@ -47,22 +71,22 @@ export async function collectPreparedSearchIndexes(bundle: BundleManifest) {
 
     for (const page of source.getPages()) {
       const index = await buildAdvancedIndex(page);
-      indexes.push({
+      const breadcrumbs = index.breadcrumbs ?? buildBreadcrumbs(source, page);
+      await insertMultiple(searchDatabase, buildSearchDocuments({
         ...index,
-        breadcrumbs: index.breadcrumbs ?? buildBreadcrumbs(source, page)
-      });
+        breadcrumbs
+      }));
     }
   }
 
-  return indexes;
+  return searchDatabase;
 }
 
-export async function exportPreparedSearchIndex(indexes: AdvancedIndex[]) {
-  const searchServer = createSearchAPI("advanced", {
-    indexes
+export function exportPreparedSearchIndex(searchDatabase: PreparedSearchDatabase) {
+  return JSON.stringify({
+    type: "advanced",
+    ...save(searchDatabase)
   });
-  const response = await searchServer.staticGET();
-  return response.text();
 }
 
 export async function hydratePreparedContent(generationId: string) {
@@ -109,6 +133,59 @@ async function buildAdvancedIndex(page: DocsSource["getPages"] extends () => inf
     id: page.url,
     structuredData
   };
+}
+
+function buildSearchDocuments(page: AdvancedIndex): PreparedSearchDocument[] {
+  const pageTag = page.tag ?? [];
+  const tags = Array.isArray(pageTag) ? pageTag : [pageTag];
+  const documents: PreparedSearchDocument[] = [{
+    id: page.id,
+    page_id: page.id,
+    type: "page",
+    content: page.title,
+    breadcrumbs: page.breadcrumbs,
+    tags,
+    url: page.url
+  }];
+
+  const data = page.structuredData;
+  let contentId = 0;
+  const nextId = () => `${page.id}-${contentId++}`;
+
+  if (page.description) {
+    documents.push({
+      id: nextId(),
+      page_id: page.id,
+      type: "text",
+      content: page.description,
+      tags,
+      url: page.url
+    });
+  }
+
+  for (const heading of data.headings) {
+    documents.push({
+      id: nextId(),
+      page_id: page.id,
+      type: "heading",
+      content: heading.content,
+      tags,
+      url: `${page.url}#${heading.id}`
+    });
+  }
+
+  for (const content of data.contents) {
+    documents.push({
+      id: nextId(),
+      page_id: page.id,
+      type: "text",
+      content: content.content,
+      tags,
+      url: content.heading ? `${page.url}#${content.heading}` : page.url
+    });
+  }
+
+  return documents;
 }
 
 function buildBreadcrumbs(source: DocsSource, page: ReturnType<DocsSource["getPages"]>[number]) {

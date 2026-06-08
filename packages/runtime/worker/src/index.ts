@@ -1,13 +1,13 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { buildProjectBundle, readBundleManifest, type BundleManifest } from "@scriptorium/bundle";
-import type { AdvancedIndex } from "fumadocs-core/search/server";
 import {
   createRuntimePreparationController,
   getRuntimeConfig,
   getRuntimePaths,
   type SourceRuntimeAdapter
 } from "@scriptorium/runtime";
+import type { PreparedSearchDatabase } from "./prepared-content";
 import type { WorkerCommand } from "./worker-protocol";
 
 export {
@@ -16,10 +16,11 @@ export {
 } from "./worker-supervisor";
 export { createSourceAdapter } from "./source-adapter";
 export {
-  collectPreparedSearchIndexes,
+  buildPreparedSearchDatabase,
   exportPreparedSearchIndex,
   hydratePreparedContent,
   loadPreparedSource,
+  type PreparedSearchDatabase,
   readPreparedSearchIndex,
   resolveGenerationPaths,
   type PreparedRuntimeContent
@@ -37,8 +38,8 @@ export type {
 export function runRuntimeWorker(options: {
   createSourceAdapter: () => SourceRuntimeAdapter;
   getRuntimeInstanceId: () => string;
-  collectPreparedSearchIndexes: (bundle: BundleManifest) => Promise<AdvancedIndex[]>;
-  exportPreparedSearchIndex: (indexes: AdvancedIndex[]) => Promise<string>;
+  buildPreparedSearchDatabase: (bundle: BundleManifest) => Promise<PreparedSearchDatabase>;
+  exportPreparedSearchIndex: (searchDatabase: PreparedSearchDatabase) => string;
 }) {
   const sourceAdapter = options.createSourceAdapter();
   const preparationController = createRuntimePreparationController<void>({
@@ -59,10 +60,10 @@ export function runRuntimeWorker(options: {
       const bundle = await readBundleManifest(projectRoot, bundleDir);
 
       setPhase("preparing-content");
-      const indexes = await options.collectPreparedSearchIndexes(bundle);
+      const searchDatabase = await options.buildPreparedSearchDatabase(bundle);
 
       setPhase("preparing-search");
-      const searchPayload = await options.exportPreparedSearchIndex(indexes);
+      const searchPayload = options.exportPreparedSearchIndex(searchDatabase);
       await writeFile(searchIndexPath, searchPayload);
     },
     activate: async () => undefined

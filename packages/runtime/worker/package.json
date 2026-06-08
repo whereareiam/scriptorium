@@ -5,6 +5,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@orama/orama": "^3.1.18",
     "@scriptorium/bundle": "workspace:*",
     "@scriptorium/content": "workspace:*",
     "@scriptorium/runtime": "workspace:*",

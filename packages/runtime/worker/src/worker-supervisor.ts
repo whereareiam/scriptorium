@@ -22,6 +22,7 @@ export function createWorkerSupervisor(options: {
   let backgroundServiceHandle: { close(): void } | null = null;
   let child: WorkerProcess | null = null;
   let childOnline = false;
+  let childStopping = false;
   let pendingPrepare = false;
   let prepareInFlight = false;
   let started = false;
@@ -61,6 +62,7 @@ export function createWorkerSupervisor(options: {
     backgroundServiceHandle = null;
 
     if (child?.connected) {
+      childStopping = true;
       child.send({ type: "shutdown" });
     } else {
       child?.kill();
@@ -68,6 +70,7 @@ export function createWorkerSupervisor(options: {
 
     child = null;
     childOnline = false;
+    childStopping = false;
   }
 
   function ensureChild() {
@@ -77,6 +80,7 @@ export function createWorkerSupervisor(options: {
 
     child = spawnWorker(options.workerEntryPath, options.instanceId);
     childOnline = false;
+    childStopping = false;
 
     child.on("message", (message) => {
       if (message.type === "online") {
@@ -87,6 +91,11 @@ export function createWorkerSupervisor(options: {
 
       if (message.type === "prepare-finished") {
         prepareInFlight = false;
+        if (!pendingPrepare) {
+          stopIdleChild();
+          return;
+        }
+
         flushPrepare();
       }
     });
@@ -100,6 +109,7 @@ export function createWorkerSupervisor(options: {
 
       child = null;
       childOnline = false;
+      childStopping = false;
       prepareInFlight = false;
 
       if (closed) {
@@ -108,6 +118,8 @@ export function createWorkerSupervisor(options: {
 
       if (hadPendingWork) {
         pendingPrepare = true;
+      } else {
+        return;
       }
 
       ensureChild();
@@ -116,13 +128,28 @@ export function createWorkerSupervisor(options: {
   }
 
   function flushPrepare() {
-    if (!child || !childOnline || prepareInFlight || !pendingPrepare) {
+    if (!child || !childOnline || childStopping || prepareInFlight || !pendingPrepare) {
       return;
     }
 
     pendingPrepare = false;
     prepareInFlight = true;
     child.send({ type: "prepare" });
+  }
+
+  function stopIdleChild() {
+    if (!child || childStopping) {
+      return;
+    }
+
+    childStopping = true;
+
+    if (child.connected) {
+      child.send({ type: "shutdown" });
+      return;
+    }
+
+    child.kill();
   }
 
   return {

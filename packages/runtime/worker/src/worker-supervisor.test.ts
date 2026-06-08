@@ -86,6 +86,60 @@ describe("createWorkerSupervisor", () => {
     ]);
   });
 
+  it("shuts the child down after a prepare completes with no pending work", () => {
+    const supervisor = createWorkerSupervisor({
+      sourceAdapter: createSourceAdapterStub(),
+      workerEntryPath: "/tmp/worker.mjs",
+      instanceId: "instance-1",
+      spawnWorker() {
+        const worker = new FakeWorkerProcess();
+        createdWorkers.push(worker);
+        return worker;
+      }
+    });
+
+    supervisor.start();
+    const worker = createdWorkers[0];
+    worker.emitMessage({ type: "online" });
+    worker.emitMessage({ type: "prepare-finished" });
+
+    expect(worker.sent).toEqual([
+      { type: "prepare" },
+      { type: "shutdown" }
+    ]);
+
+    worker.emitExit(0);
+    expect(createdWorkers).toHaveLength(1);
+  });
+
+  it("spawns a new child for later work after the previous one shuts down idle", async () => {
+    const supervisor = createWorkerSupervisor({
+      sourceAdapter: createSourceAdapterStub(),
+      workerEntryPath: "/tmp/worker.mjs",
+      instanceId: "instance-1",
+      spawnWorker() {
+        const worker = new FakeWorkerProcess();
+        createdWorkers.push(worker);
+        return worker;
+      }
+    });
+
+    supervisor.start();
+    const firstWorker = createdWorkers[0];
+    firstWorker.emitMessage({ type: "online" });
+    firstWorker.emitMessage({ type: "prepare-finished" });
+    firstWorker.emitExit(0);
+
+    await supervisor.requestPrepare();
+
+    expect(createdWorkers).toHaveLength(2);
+
+    const secondWorker = createdWorkers[1];
+    secondWorker.emitMessage({ type: "online" });
+
+    expect(secondWorker.sent).toEqual([{ type: "prepare" }]);
+  });
+
   it("respawns and retries when the child exits during an active prepare", async () => {
     const supervisor = createWorkerSupervisor({
       sourceAdapter: createSourceAdapterStub(),
