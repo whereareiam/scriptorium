@@ -1,47 +1,34 @@
-import { execFile } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { mkdir, realpath, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
 import { filterBundledRepositoryPaths, normalizeRepoRelativePath, type StageRepository } from "@scriptorium/core";
 import { getRepositoryRoot, listGitRefs } from "../git-source";
 import type { SyncGitRepositoryOptions } from "../models/sync-git-repository-options";
 
-const execFileAsync = promisify(execFile);
-const GIT_MAX_BUFFER = 16 * 1024 * 1024;
-
-async function runGit(repoRoot: string, args: string[]) {
-  const { stdout } = await execFileAsync("git", args, {
+function runGit(repoRoot: string, args: string[]) {
+  return execFileSync("git", args, {
     cwd: repoRoot,
-    encoding: "utf8",
-    maxBuffer: GIT_MAX_BUFFER
-  });
-
-  return stdout.trim();
+    encoding: "utf8"
+  }).trim();
 }
 
-async function runGitIn(cwd: string, args: string[], options: { env?: NodeJS.ProcessEnv } = {}) {
-  const { stdout } = await execFileAsync("git", args, {
+function runGitIn(cwd: string, args: string[], options: { env?: NodeJS.ProcessEnv } = {}) {
+  return execFileSync("git", args, {
     cwd,
     encoding: "utf8",
-    env: options.env,
-    maxBuffer: GIT_MAX_BUFFER
-  });
-
-  return stdout.trim();
+    env: options.env
+  }).trim();
 }
 
-async function readGitFile(repoRoot: string, refName: string, filePath: string) {
-  const { stdout } = await execFileAsync("git", ["show", `${refName}:${filePath}`], {
+function readGitFile(repoRoot: string, refName: string, filePath: string) {
+  return execFileSync("git", ["show", `${refName}:${filePath}`], {
     cwd: repoRoot,
-    encoding: "buffer",
-    maxBuffer: GIT_MAX_BUFFER
+    encoding: "buffer"
   });
-
-  return stdout;
 }
 
-export async function createGitCliStageRepository(projectRoot: string): Promise<StageRepository> {
-  const repoRoot = await getRepositoryRoot(projectRoot);
+export function createGitCliStageRepository(projectRoot: string): StageRepository {
+  const repoRoot = getRepositoryRoot(projectRoot);
 
   return {
     repoRoot,
@@ -55,7 +42,7 @@ export async function createGitCliStageRepository(projectRoot: string): Promise<
         args.push(projectPath);
       }
 
-      const output = (await runGit(repoRoot, args)).trim();
+      const output = runGit(repoRoot, args).trim();
       if (output === "") {
         return [];
       }
@@ -67,14 +54,14 @@ export async function createGitCliStageRepository(projectRoot: string): Promise<
     },
     async getCurrentBranch() {
       try {
-        return await runGit(repoRoot, ["branch", "--show-current"]);
+        return runGit(repoRoot, ["branch", "--show-current"]);
       } catch {
         return "";
       }
     },
     async isWorktreeDirty() {
       try {
-        return (await runGit(repoRoot, ["status", "--porcelain"])) !== "";
+        return runGit(repoRoot, ["status", "--porcelain"]) !== "";
       } catch {
         return false;
       }
@@ -105,17 +92,17 @@ export async function syncGitCliRepository(options: SyncGitRepositoryOptions) {
       throw new Error("Not a git repository.");
     }
 
-    await runGitIn(repoDir, ["remote", "set-url", "origin", repoUrl], { env: environment });
+    runGitIn(repoDir, ["remote", "set-url", "origin", repoUrl], { env: environment });
   } catch {
     await rm(repoDir, { recursive: true, force: true });
     await mkdir(repoDir, { recursive: true });
-    await runGitIn(repoDir, ["init", "--initial-branch", defaultBranch], { env: environment });
-    await runGitIn(repoDir, ["remote", "add", "origin", repoUrl], { env: environment });
+    runGitIn(repoDir, ["init", "--initial-branch", defaultBranch], { env: environment });
+    runGitIn(repoDir, ["remote", "add", "origin", repoUrl], { env: environment });
   }
 
-  await runGitIn(repoDir, ["fetch", "--prune", "--prune-tags", "--tags", "origin"], { env: environment });
-  await runGitIn(repoDir, ["checkout", "-B", defaultBranch, `origin/${defaultBranch}`], { env: environment });
-  await runGitIn(repoDir, ["reset", "--hard", `origin/${defaultBranch}`], { env: environment });
+  runGitIn(repoDir, ["fetch", "--prune", "--prune-tags", "--tags", "origin"], { env: environment });
+  runGitIn(repoDir, ["checkout", "-B", defaultBranch, `origin/${defaultBranch}`], { env: environment });
+  runGitIn(repoDir, ["reset", "--hard", `origin/${defaultBranch}`], { env: environment });
 }
 
 async function createGitEnvironment(repoDir: string, options: SyncGitRepositoryOptions) {

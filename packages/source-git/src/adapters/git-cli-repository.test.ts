@@ -53,7 +53,7 @@ describe("syncGitCliRepository", () => {
       defaultBranch: "dev"
     });
 
-    const repository = await createGitCliStageRepository(repoDir);
+    const repository = createGitCliStageRepository(repoDir);
     const refs = await repository.listRefs();
 
     expect(refs.map((ref) => ref.name).sort()).toEqual(["dev", "release/1.x", "v1.0.0"]);

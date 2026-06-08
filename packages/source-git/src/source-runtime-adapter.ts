@@ -48,7 +48,7 @@ export function createGitSourceRuntimeAdapter(options: {
 
       return {
         projectRoot,
-        repository: await createGitCliStageRepository(projectRoot)
+        repository: createGitCliStageRepository(projectRoot)
       };
     },
     async loadProjectConfigForWarmup() {

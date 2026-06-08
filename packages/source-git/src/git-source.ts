@@ -1,26 +1,19 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { execFileSync } from "node:child_process";
 import type { SourceRef } from "@scriptorium/core";
 
-const execFileAsync = promisify(execFile);
-const GIT_MAX_BUFFER = 16 * 1024 * 1024;
-
-async function runGit(projectRoot: string, args: string[]) {
-  const { stdout } = await execFileAsync("git", args, {
+function runGit(projectRoot: string, args: string[]) {
+  return execFileSync("git", args, {
     cwd: projectRoot,
-    encoding: "utf8",
-    maxBuffer: GIT_MAX_BUFFER
-  });
-
-  return stdout.trim();
+    encoding: "utf8"
+  }).trim();
 }
 
 export function getRepositoryRoot(projectRoot: string) {
   return runGit(projectRoot, ["rev-parse", "--show-toplevel"]);
 }
 
-export async function listGitRefs(projectRoot: string) {
-  const output = await runGit(projectRoot, [
+export function listGitRefs(projectRoot: string) {
+  const output = runGit(projectRoot, [
     "for-each-ref",
     "--format=%(refname:short)|%(refname)|%(objectname)",
     "refs/heads",
