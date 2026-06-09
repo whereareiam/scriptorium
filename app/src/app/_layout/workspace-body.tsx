@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import type { ReactNode } from "react";
+import { getWorkspaceClassName } from "@scriptorium/ui";
 
 export function WorkspaceBody({ children }: { children: ReactNode }) {
   const { slug = [] } = useParams<{ slug?: string[] }>();
@@ -22,8 +23,4 @@ export function WorkspaceBody({ children }: { children: ReactNode }) {
       {children}
     </body>
   );
-}
-
-function getWorkspaceClassName(refSlug: string) {
-  return `workspace-${refSlug}`;
 }

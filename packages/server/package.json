@@ -1,0 +1,13 @@
+{
+  "name": "@scriptorium/server",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@fumadocs/local-md": "^0.2.1",
+    "@scriptorium/server-api": "workspace:*",
+    "fumadocs-core": "^16.8.5",
+    "react": "^19.2.5"
+  }
+}

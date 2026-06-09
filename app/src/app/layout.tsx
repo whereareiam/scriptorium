@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { RootProvider } from "fumadocs-ui/provider/next";
+import { hasUsableContent } from "@scriptorium/server-api";
 import {
   buildWorkspaceThemeStylesheet,
   getBundlingCaptions,
@@ -10,7 +11,7 @@ import {
 import { RuntimeReadinessGuard } from "./_layout/runtime-readiness-guard";
 import { SearchDialog } from "./_layout/search-dialog";
 import { resolveProjectAssetUrl, resolveProjectFaviconUrl } from "./_layout/project-assets";
-import { RuntimeWarmupScreen } from "./_layout/runtime-warmup-screen";
+import { RuntimeWarmupScreen } from "./_layout/warmup/runtime-warmup-screen";
 import { WorkspaceBody } from "./_layout/workspace-body";
 import "./global.css";
 
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const readiness = await getRuntimeReadiness();
-  if (!readiness.ok) {
+  if (!hasUsableContent(readiness)) {
     return {
       title: "Preparing documentation"
     };
@@ -43,7 +44,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const readiness = await getRuntimeReadiness();
-  if (!readiness.ok) {
+  if (!hasUsableContent(readiness)) {
     const captions = await getBundlingCaptions();
     return (
       <html lang="en" suppressHydrationWarning>
@@ -59,14 +60,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const project = await getProjectConfig();
   const captions = await getBundlingCaptions();
   const workspaceThemeCss = buildWorkspaceThemeStylesheet(project);
-  const activeGenerationId = readiness.status.activeGenerationId;
+  const contentToken = readiness.state.content?.token;
 
   return (
     <html lang="en" suppressHydrationWarning>
       <WorkspaceBody>
         {workspaceThemeCss ? <style>{workspaceThemeCss}</style> : null}
         <RootProvider search={{ SearchDialog }}>
-          <RuntimeReadinessGuard activeGenerationId={activeGenerationId} captions={captions}>
+          <RuntimeReadinessGuard contentToken={contentToken} captions={captions}>
             {children}
           </RuntimeReadinessGuard>
         </RootProvider>

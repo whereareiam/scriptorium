@@ -1,0 +1,11 @@
+{
+  "name": "@scriptorium/trigger-github",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@scriptorium/server-worker-api": "workspace:*",
+    "@scriptorium/trigger-api": "workspace:*"
+  }
+}

@@ -8,13 +8,15 @@ const config = {
   output: "standalone",
   reactStrictMode: true,
   transpilePackages: [
-    "@scriptorium/content",
-    "@scriptorium/core",
-    "@scriptorium/bundle",
-    "@scriptorium/runtime-source-git",
-    "@scriptorium/runtime-source-local",
-    "@scriptorium/runtime",
-    "@scriptorium/runtime-worker",
+    "@scriptorium/server",
+    "@scriptorium/server-api",
+    "@scriptorium/server-worker-api",
+    "@scriptorium/server-worker",
+    "@scriptorium/source-api",
+    "@scriptorium/source-git",
+    "@scriptorium/source-local",
+    "@scriptorium/trigger-api",
+    "@scriptorium/trigger-github",
     "@scriptorium/ui"
   ],
   outputFileTracingRoot: path.join(__dirname, "..")

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import type { LocalMarkdownPage } from "@fumadocs/local-md";
-import { getProjectConfig, getRefUrl, getRuntimeReadiness, getSource } from "@/scriptorium";
+import { hasUsableContent, toRefSlug } from "@scriptorium/server-api";
+import { getProjectConfig, getRuntimeReadiness, getSource } from "@/scriptorium";
 import { getMDXComponents } from "@scriptorium/ui";
 import { createRelativeLink } from "fumadocs-ui/mdx";
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/layouts/docs/page";
@@ -12,18 +13,17 @@ export default async function DocsPageRoute(
   { params }: { params: Promise<{ slug?: string[] }> }
 ) {
   const readiness = await getRuntimeReadiness();
-  if (!readiness.ok) {
+  if (!hasUsableContent(readiness)) {
     return null;
   }
 
   const { slug = [] } = await params;
   if (slug.length === 0) {
     const config = await getProjectConfig();
-    const { source } = await getSource();
-    redirect(getRefUrl(source, config.versions.home));
+    redirect(`/docs/${toRefSlug(config.versions.home)}`);
   }
 
-  const { source } = await getSource();
+  const { source } = await getSource(slug[0]);
   const page = source.getPage(slug);
 
   if (!page) {
@@ -34,7 +34,7 @@ export default async function DocsPageRoute(
   const { render } = await localPage.load();
   const { body, toc } = await render(
     getMDXComponents({
-      a: createRelativeLink(source, page)
+      a: createRelativeLink(source as never, page as never)
     })
   );
 
@@ -55,7 +55,7 @@ export async function generateMetadata(
   { params }: { params: Promise<{ slug?: string[] }> }
 ): Promise<Metadata> {
   const readiness = await getRuntimeReadiness();
-  if (!readiness.ok) {
+  if (!hasUsableContent(readiness)) {
     return {
       title: "Preparing documentation"
     };
@@ -71,7 +71,7 @@ export async function generateMetadata(
     };
   }
 
-  const { source } = await getSource();
+  const { source } = await getSource(slug[0]);
   const page = source.getPage(slug);
 
   if (!page) {

@@ -1,0 +1,30 @@
+export type SourceRefKind = "branch" | "tag";
+
+export interface SourceRef {
+  name: string;
+  fullName: string;
+  objectName: string;
+  kind: SourceRefKind;
+}
+
+export interface StageRepository {
+  repoRoot: string;
+  listRefs(): Promise<SourceRef[]>;
+  listFiles(refName: string, projectRoot: string): Promise<string[]>;
+  readFile(refName: string, filePath: string): Promise<Buffer>;
+  getCurrentBranch?(): Promise<string>;
+  isWorktreeDirty?(): Promise<boolean>;
+}
+
+export interface SourceAdapterCallbacks {
+  requestPrepare: () => Promise<void>;
+}
+
+export interface SourceAdapter {
+  readonly type: "git" | "local";
+  prepareRepository(): Promise<{
+    projectRoot: string;
+    repository: StageRepository;
+  }>;
+  startBackgroundServices?: (callbacks: SourceAdapterCallbacks) => { close(): void } | null;
+}

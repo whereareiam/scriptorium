@@ -1,0 +1,7 @@
+{
+  "name": "@scriptorium/server-worker-api",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

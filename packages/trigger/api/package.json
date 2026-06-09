@@ -1,0 +1,7 @@
+{
+  "name": "@scriptorium/trigger-api",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

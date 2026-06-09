@@ -1,4 +1,5 @@
 import { getProjectConfig, getRuntimeReadiness, readCurrentAsset } from "@/scriptorium";
+import { hasUsableContent } from "@scriptorium/server-api";
 import {
   getAssetContentType,
   resolveProjectFaviconAssetPath,
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const readiness = await getRuntimeReadiness();
-  if (!readiness.ok) {
+  if (!hasUsableContent(readiness)) {
     return new Response(null, { status: 503 });
   }
 
@@ -18,7 +19,7 @@ export async function GET() {
   const assetSegments = toCurrentAssetSegments(faviconPath);
   const body = await readCurrentAsset(assetSegments);
 
-  return new Response(body, {
+  return new Response(new Uint8Array(body), {
     headers: {
       "content-type": getAssetContentType(faviconPath),
       "cache-control": "public, max-age=3600, s-maxage=3600"

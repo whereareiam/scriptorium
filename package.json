@@ -5,14 +5,15 @@
   "workspaces": [
     "app",
     "packages/*",
-    "packages/runtime/*"
+    "packages/*/*",
+    "packages/*/*/*",
+    "packages/*/*/*/*"
   ],
   "scripts": {
     "dev": "bun run --cwd app dev",
     "dev:local": "bun run --cwd app dev",
     "dev:built": "bun run --cwd app dev:built",
-    "build": "bun run --cwd app build && bun run build:worker",
-    "build:worker": "bun build ./packages/runtime/worker/src/entry.ts --outfile ./app/.next/standalone/app/scriptorium-worker.mjs --target bun",
+    "build": "bun run --cwd app build",
     "typecheck": "bun run --cwd app typecheck",
     "validate": "bun test && bun run --cwd app typecheck && bun run build",
     "test": "bun test"

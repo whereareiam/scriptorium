@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { ScriptoriumProjectConfig } from "@scriptorium/core";
+import type { ScriptoriumProjectConfig } from "@scriptorium/server-api";
 
 function normalizeProjectAssetPath(assetPath: string) {
   return assetPath.replaceAll("\\", "/").replace(/^\/+/, "");

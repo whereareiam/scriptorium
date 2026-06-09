@@ -1,0 +1,10 @@
+{
+  "name": "@scriptorium/source-local",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@scriptorium/source-api": "workspace:*"
+  }
+}

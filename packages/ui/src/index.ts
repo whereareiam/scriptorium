@@ -1,14 +1,14 @@
-export { getMDXComponents } from "./ui/mdx-components";
-export { type RefOption, type RefSwitcherProps } from "./models/ref-switcher";
-export { type ContentTabProps, type ContentTabsProps, ContentTab, ContentTabs } from "./ui/content-tabs";
-export { RefSwitcher } from "./ui/ref-switcher";
+export { getMDXComponents } from "./components-registry";
+export { type RefOption, type RefSwitcherProps, RefSwitcher } from "./components/ref-switcher";
+export { type ContentTabProps, type ContentTabsProps, ContentTab, ContentTabs } from "./components/content-tabs";
 export {
   type BadgeProps,
   type BadgeType,
   Badge
-} from "./ui/badge";
+} from "./components/badge";
 export {
   type MavenVersionLinkProps,
   MavenVersionLink
-} from "./ui/maven-version-link";
-export { createProjectLinkIcon } from "./ui/project-links";
+} from "./components/maven-version-link";
+export { createConfiguredIcon } from "./icon/configured-icons";
+export { buildWorkspaceThemeStylesheet, getWorkspaceClassName } from "./workspace-theme";

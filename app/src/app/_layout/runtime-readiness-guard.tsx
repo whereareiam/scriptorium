@@ -1,21 +1,21 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { RuntimeWarmupScreen } from "./runtime-warmup-screen";
+import { RuntimeWarmupScreen } from "./warmup/runtime-warmup-screen";
 
 export function RuntimeReadinessGuard(
   {
-    activeGenerationId,
+    contentToken,
     captions,
     children
   }: {
-    activeGenerationId?: string;
+    contentToken?: string;
     captions: string[];
     children: ReactNode;
   }
 ) {
   const [blocked, setBlocked] = useState(false);
-  const [currentGenerationId, setCurrentGenerationId] = useState(activeGenerationId);
+  const [currentContentToken, setCurrentContentToken] = useState(contentToken);
 
   useEffect(() => {
     let disposed = false;
@@ -26,21 +26,28 @@ export function RuntimeReadinessGuard(
           cache: "no-store"
         });
         const nextStatus = await response.json() as {
-          ok?: boolean;
-          activeGenerationId?: string;
+          state?: {
+            kind?: "ready" | "refreshing" | "starting" | "failed";
+            content?: {
+              token?: string;
+            };
+          };
         };
 
         if (disposed) {
           return;
         }
 
-        if (nextStatus.ok === false) {
+        if (nextStatus.state?.kind === "starting" || nextStatus.state?.kind === "failed") {
           setBlocked(true);
           return;
         }
 
-        if (nextStatus.activeGenerationId && nextStatus.activeGenerationId !== currentGenerationId) {
-          setCurrentGenerationId(nextStatus.activeGenerationId);
+        setBlocked(false);
+
+        const nextToken = nextStatus.state?.content?.token;
+        if (nextToken && nextToken !== currentContentToken) {
+          setCurrentContentToken(nextToken);
           window.location.reload();
         }
       } catch {
@@ -56,7 +63,7 @@ export function RuntimeReadinessGuard(
       disposed = true;
       window.clearInterval(interval);
     };
-  }, [blocked, currentGenerationId]);
+  }, [currentContentToken]);
 
   if (blocked) {
     return <RuntimeWarmupScreen captions={captions} />;

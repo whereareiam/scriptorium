@@ -1,225 +1,165 @@
-import path from "node:path";
-import { readFile } from "node:fs/promises";
+import { loadProjectConfig } from "@/config/load-project-config";
 import {
-  getRefMetadata,
-  getRefUrl,
-  type ScriptoriumProjectConfig
-} from "@scriptorium/core";
+  loadRuntimeConfig,
+  resolveLocalProjectRoot,
+  resolveRuntimePaths,
+  type RuntimeConfig,
+  type RuntimePaths
+} from "@/config/load-runtime-config";
 import {
-  buildWorkspaceThemeStylesheet,
-  createCurrentAssetReader
-} from "@scriptorium/content";
-import {
-  getLocalProjectRoot,
-  getRuntimeConfig,
-  getRuntimePaths,
-  type RuntimePhase,
-  type RuntimeReadiness,
-  type RuntimeReadinessStatus
-} from "@scriptorium/runtime";
-import {
-  createSourceAdapter,
-  createWorkerSupervisor,
-  getRuntimeInstanceId,
-  hydratePreparedContent,
-  readPreparedSearchIndex,
-  type PreparedRuntimeContent
-} from "@scriptorium/runtime-worker";
-import { resolveBundlingCaptions } from "./app/_layout/runtime-warmup-copy";
+  toRefSlug,
+} from "@scriptorium/server-api";
+import { createScriptoriumServer, type ScriptoriumServer } from "@scriptorium/server";
+import { createWorkerService } from "@scriptorium/server-worker";
+import type { WorkerService } from "@scriptorium/server-worker-api";
+import type { SourceAdapter } from "@scriptorium/source-api";
+import { createGitSourceAdapter } from "@scriptorium/source-git";
+import { createLocalSourceAdapter } from "@scriptorium/source-local";
+import { createGitHubTriggerHandler } from "@scriptorium/trigger-github";
+import type { TriggerHandler } from "@scriptorium/trigger-api";
+import { buildWorkspaceThemeStylesheet } from "@scriptorium/ui";
 
-interface ScriptoriumRuntimeSingleton {
-  activePreparedContent: PreparedRuntimeContent | null;
-  hydratingPreparedContent: Promise<PreparedRuntimeContent | null> | null;
-  hydratingGenerationId: string | null;
-  servicesStarted: boolean;
-  sourceAdapter: ReturnType<typeof createSourceAdapter>;
-  workerSupervisor: ReturnType<typeof createWorkerSupervisor>;
+interface RuntimeServices {
+  server: ScriptoriumServer;
+  worker: WorkerService;
+  triggerHandler: TriggerHandler;
 }
 
 const globalRuntime = globalThis as typeof globalThis & {
-  __scriptoriumRuntime?: ScriptoriumRuntimeSingleton;
+  __scriptoriumRuntime?: RuntimeServices;
 };
 
-const singleton = globalRuntime.__scriptoriumRuntime ??= createScriptoriumRuntimeSingleton();
-
-interface PersistedState extends RuntimeReadinessStatus {
-  instanceId?: string;
-}
-
-const readCurrentAsset = createCurrentAssetReader({
-  async getCurrentAssetsDir(projectRoot) {
-    const state = await readPersistedState();
-    if (state?.phase === "ready" && state.activeGenerationId) {
-      if (singleton.activePreparedContent?.generationId === state.activeGenerationId) {
-        return singleton.activePreparedContent.currentAssetsDir;
-      }
-
-      return path.join(getRuntimePaths().generationsDir, state.activeGenerationId, "bundle", "current", "assets");
-    }
-
-    return path.join(projectRoot ?? getLocalProjectRoot(), ".scriptorium", "bundle", "current", "assets");
-  }
-});
-
-async function handleSourceWebhook(request: Request) {
-  if (!singleton.sourceAdapter.handleWebhook) {
-    return Response.json({ error: "Webhook source is not enabled." }, { status: 404 });
-  }
-
-  return singleton.sourceAdapter.handleWebhook(request, {
-    requestPrepare: () => singleton.workerSupervisor.requestPrepare()
-  });
+function getRuntimeServices() {
+  const runtime = globalRuntime.__scriptoriumRuntime ??= createRuntimeServices();
+  runtime.worker.start();
+  return runtime;
 }
 
 export function ensureRuntimeServices() {
-  if (singleton.servicesStarted) {
-    return;
-  }
-
-  singleton.servicesStarted = true;
-  singleton.workerSupervisor.start();
+  getRuntimeServices();
 }
 
-async function ensureHydratedPreparedContent() {
-  const state = await readPersistedState();
-  if (state?.phase !== "ready" || !state.activeGenerationId) {
-    return singleton.activePreparedContent;
-  }
-
-  if (singleton.activePreparedContent?.generationId === state.activeGenerationId) {
-    return singleton.activePreparedContent;
-  }
-
-  if (
-    singleton.hydratingPreparedContent
-    && singleton.hydratingGenerationId === state.activeGenerationId
-  ) {
-    return singleton.hydratingPreparedContent;
-  }
-
-  singleton.hydratingGenerationId = state.activeGenerationId;
-  singleton.hydratingPreparedContent = hydratePreparedContent(state.activeGenerationId)
-    .then((prepared) => {
-      singleton.activePreparedContent = prepared;
-      return prepared;
-    })
-    .finally(() => {
-      singleton.hydratingPreparedContent = null;
-      singleton.hydratingGenerationId = null;
-    });
-
-  return singleton.hydratingPreparedContent;
-}
-
-function getActivePreparedContent() {
-  if (!singleton.activePreparedContent)
-    throw new Error("Runtime content is not ready yet.");
-
-  return singleton.activePreparedContent;
+export async function getRuntimeReadiness() {
+  return getRuntimeServices().server.getReadiness();
 }
 
 export async function getProjectConfig() {
-  ensureRuntimeServices();
-  await ensureHydratedPreparedContent();
-  return getActivePreparedContent().bundle.project;
+  return getRuntimeServices().server.getProjectConfig();
 }
 
 export async function getBundlingCaptions() {
-  ensureRuntimeServices();
-
-  const hydrated = await ensureHydratedPreparedContent();
-  if (hydrated) {
-    return resolveBundlingCaptions(hydrated.bundle.project);
-  }
-
-  return resolveBundlingCaptions(await loadBundlingProjectConfig());
+  return getRuntimeServices().server.getBundlingCaptions();
 }
 
 export async function getPublishedVersions() {
-  ensureRuntimeServices();
-  await ensureHydratedPreparedContent();
-  return getActivePreparedContent().bundle.versions;
+  return getRuntimeServices().server.getPublishedVersions();
 }
 
-export async function getSource() {
-  ensureRuntimeServices();
-  await ensureHydratedPreparedContent();
+export async function getSource(refName?: string) {
   return {
-    source: getActivePreparedContent().source
+    source: await getRuntimeServices().server.getSource(refName)
   };
 }
 
-export async function getPreparedSearchIndex() {
-  ensureRuntimeServices();
-  const readiness = await getRuntimeReadiness();
-  if (!readiness.ok || !readiness.status.activeGenerationId) {
-    throw new Error("Search is not ready.");
-  }
-
-  return readPreparedSearchIndex(readiness.status.activeGenerationId);
+export async function getSidebarTree(refName: string) {
+  return getRuntimeServices().server.getSidebarTree(refName);
 }
 
-export async function getRuntimeReadiness(): Promise<RuntimeReadiness> {
-  ensureRuntimeServices();
-  return toRuntimeReadiness(await readPersistedState());
+export async function getPreparedSearchIndex(refSlug: string) {
+  return getRuntimeServices().server.getPreparedSearchIndex(refSlug);
 }
 
 export async function requestRuntimePreparation() {
-  ensureRuntimeServices();
-  await singleton.workerSupervisor.requestPrepare();
+  await getRuntimeServices().worker.requestPrepare({
+    reason: "manual"
+  });
+}
+
+export function handleHealthRequest() {
+  return getRuntimeServices().server.handleHealthRequest();
+}
+
+export function handleReadinessRequest() {
+  return getRuntimeServices().server.handleReadinessRequest();
+}
+
+export function handleSearchRequest(request: Request) {
+  return getRuntimeServices().server.handleSearchRequest(request);
+}
+
+export async function handleSourceWebhook(request: Request) {
+  const result = await getRuntimeServices().triggerHandler.handle(request);
+  return Response.json(result, {
+    status: result.status
+  });
+}
+
+export function readCurrentAsset(assetSegments: string[]) {
+  return getRuntimeServices().server.readCurrentAsset(assetSegments);
 }
 
 export {
   buildWorkspaceThemeStylesheet,
-  getRefMetadata,
-  getRefUrl,
-  handleSourceWebhook,
-  readCurrentAsset
+  toRefSlug
 };
-export { getLocalProjectRoot, getRuntimeConfig, getRuntimePaths };
 
-function createScriptoriumRuntimeSingleton(): ScriptoriumRuntimeSingleton {
-  const sourceAdapter = createSourceAdapter();
+function createRuntimeServices(): RuntimeServices {
+  const config = loadRuntimeConfig();
+  const runtimePaths = resolveRuntimePaths(config);
+  const localProjectRoot = resolveLocalProjectRoot(config);
+  const sourceAdapter = createSourceAdapter(config, runtimePaths, localProjectRoot);
+  const worker = createWorker(runtimePaths, sourceAdapter);
+  const server = createScriptoriumServer({
+    generationsDir: runtimePaths.generationsDir,
+    stateFile: runtimePaths.stateFile
+  });
+  const triggerHandler = createGitHubTriggerHandler({
+    secret: config.triggers?.webhook?.secret,
+    workerService: worker
+  });
 
   return {
-    activePreparedContent: null,
-    hydratingPreparedContent: null,
-    hydratingGenerationId: null,
-    servicesStarted: false,
-    sourceAdapter,
-    workerSupervisor: createWorkerSupervisor({
-      sourceAdapter,
-      workerEntryPath: path.resolve(process.cwd(), "scriptorium-worker.mjs"),
-      instanceId: getRuntimeInstanceId()
-    })
+    server,
+    worker,
+    triggerHandler
   };
 }
 
-async function loadBundlingProjectConfig(): Promise<ScriptoriumProjectConfig | null> {
-  return singleton.sourceAdapter.loadProjectConfigForWarmup();
-}
-
-async function readPersistedState() {
-  try {
-    const raw = await readFile(getRuntimePaths().stateFile, "utf8");
-    return JSON.parse(raw) as PersistedState;
-  } catch {
-    return null;
-  }
-}
-
-function toRuntimeReadiness(state: PersistedState | null): RuntimeReadiness {
-  const phase: RuntimePhase = state?.phase ?? "idle";
-
-  return {
-    ok: phase === "ready",
-    status: {
-      phase,
-      startedAt: state?.startedAt,
-      finishedAt: state?.finishedAt,
-      lastSuccessfulPreparedAt: state?.lastSuccessfulPreparedAt,
-      activeGenerationId: state?.activeGenerationId,
-      error: state?.error
+function createSourceAdapter(config: RuntimeConfig, runtimePaths: RuntimePaths, localProjectRoot: string): SourceAdapter {
+  if (config.source.type === "git") {
+    if (!config.source.target) {
+      throw new Error("Runtime source.target is not configured for git source mode.");
     }
-  };
+
+    return createGitSourceAdapter({
+      projectRoot: runtimePaths.repoDir,
+      repoUrl: config.source.target,
+      defaultBranch: config.source.defaultBranch,
+      authToken: config.source.auth?.token,
+      authUsername: config.source.auth?.username
+    });
+  }
+
+  return createLocalSourceAdapter({
+    projectRoot: localProjectRoot
+  });
+}
+
+function createWorker(runtimePaths: RuntimePaths, sourceAdapter: SourceAdapter): WorkerService {
+  return createWorkerService({
+    sourceAdapter,
+    runtimePaths,
+    async loadProject(projectRoot) {
+      const project = await loadProjectConfig(projectRoot);
+
+      return {
+        project,
+        workerProject: {
+          homeRefName: project.versions.home,
+          include: project.versions.include,
+          extraRefNames: Object.keys(project.versions.meta)
+        }
+      };
+    }
+  });
 }
