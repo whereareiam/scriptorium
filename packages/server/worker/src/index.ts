@@ -2,9 +2,9 @@ import type { ScriptoriumProjectConfig } from "@scriptorium/server-api";
 import type { WorkerProject, WorkerService } from "@scriptorium/server-worker-api";
 import type { SourceAdapter } from "@scriptorium/source-api";
 import { buildProjectBundle } from "./bundle/build-project-bundle";
+import { buildServedArtifacts, type BuiltServedArtifacts } from "./bundle/served/build/build-served-artifacts";
 import { writeServedBundleManifest } from "./bundle/content";
-import { buildSearchArtifacts } from "./bundle/search";
-import { createPreparationController, type RuntimePaths } from "./preparation";
+import { BundlingLogger, createPreparationController, type RuntimePaths } from "./preparation";
 
 export { type RuntimePaths } from "./preparation";
 
@@ -16,9 +16,19 @@ export function createWorkerService(options: {
     workerProject: WorkerProject;
   }>;
 }): WorkerService {
-  const preparationController = createPreparationController<void>({
+  const logger = new BundlingLogger(options.sourceAdapter.type);
+  const preparationController = createPreparationController<BuiltServedArtifacts>({
     runtimePaths: options.runtimePaths,
-    async prepare({ generationDir, setPhase }) {
+    logger,
+    getCompletionPayload(value) {
+      return {
+        artifact_bytes: value.artifact_bytes,
+        page_count: value.page_count,
+        ref_count: value.ref_count,
+        search_document_count: value.search_document_count
+      };
+    },
+    async prepare({ generationDir, request, setPhase }) {
       const bundleDir = `${generationDir}/bundle`;
       const { projectRoot, repository } = await options.sourceAdapter.prepareRepository();
       const stagedBundle = await buildProjectBundle({
@@ -28,10 +38,13 @@ export function createWorkerService(options: {
         loadProject: options.loadProject
       });
 
-      setPhase("preparing-content");
-      const manifest = await buildSearchArtifacts(stagedBundle, generationDir);
-      setPhase("preparing-search");
-      await writeServedBundleManifest(bundleDir, manifest);
+      const servedArtifacts = await buildServedArtifacts(stagedBundle, generationDir, {
+        logger,
+        request,
+        setPhase
+      });
+      await writeServedBundleManifest(bundleDir, servedArtifacts.manifest);
+      return servedArtifacts;
     },
     activate: async () => undefined
   });
@@ -46,16 +59,18 @@ export function createWorkerService(options: {
       }
 
       started = true;
-      void preparationController.requestPrepare();
+      void preparationController.requestPrepare({
+        reason: "manual"
+      });
 
       if (options.sourceAdapter.startBackgroundServices) {
         backgroundServiceHandle = options.sourceAdapter.startBackgroundServices({
-          requestPrepare: () => preparationController.requestPrepare()
+          requestPrepare: (request) => preparationController.requestPrepare(request)
         });
       }
     },
-    requestPrepare() {
-      return preparationController.requestPrepare();
+    requestPrepare(request) {
+      return preparationController.requestPrepare(request);
     },
     close() {
       backgroundServiceHandle?.close();

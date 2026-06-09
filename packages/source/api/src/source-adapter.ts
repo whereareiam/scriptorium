@@ -1,3 +1,5 @@
+import type { PrepareRequest } from "@scriptorium/server-worker-api";
+
 export type SourceRefKind = "branch" | "tag";
 
 export interface SourceRef {
@@ -17,7 +19,7 @@ export interface StageRepository {
 }
 
 export interface SourceAdapterCallbacks {
-  requestPrepare: () => Promise<void>;
+  requestPrepare: (request?: PrepareRequest) => Promise<void>;
 }
 
 export interface SourceAdapter {

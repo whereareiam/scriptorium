@@ -9,7 +9,11 @@ import {
 import {
   toRefSlug,
 } from "@scriptorium/server-api";
-import { createScriptoriumServer, type ScriptoriumServer } from "@scriptorium/server";
+import {
+  createScriptoriumServer,
+  renderPreparedPageArtifact,
+  type ScriptoriumServer
+} from "@scriptorium/server";
 import { createWorkerService } from "@scriptorium/server-worker";
 import type { WorkerService } from "@scriptorium/server-worker-api";
 import type { SourceAdapter } from "@scriptorium/source-api";
@@ -55,14 +59,16 @@ export async function getPublishedVersions() {
   return getRuntimeServices().server.getPublishedVersions();
 }
 
-export async function getSource(refName?: string) {
-  return {
-    source: await getRuntimeServices().server.getSource(refName)
-  };
+export async function getPreparedPage(slugSegments: string[]) {
+  return getRuntimeServices().server.getPreparedPage(slugSegments);
 }
 
 export async function getSidebarTree(refName: string) {
   return getRuntimeServices().server.getSidebarTree(refName);
+}
+
+export async function resolvePreparedPageHref(refNameOrSlug: string, sourcePath: string, href: string) {
+  return getRuntimeServices().server.resolvePreparedPageHref(refNameOrSlug, sourcePath, href);
 }
 
 export async function getPreparedSearchIndex(refSlug: string) {
@@ -99,6 +105,7 @@ export function readCurrentAsset(assetSegments: string[]) {
 }
 
 export {
+  renderPreparedPageArtifact,
   buildWorkspaceThemeStylesheet,
   toRefSlug
 };

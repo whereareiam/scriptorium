@@ -45,7 +45,8 @@ export function createGitHubTriggerHandler(options: {
       }
 
       await options.workerService.requestPrepare({
-        reason: "webhook"
+        reason: "webhook",
+        event: typeof event === "string" ? event : undefined
       });
 
       return {

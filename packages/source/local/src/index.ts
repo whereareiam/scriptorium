@@ -21,7 +21,9 @@ export function createLocalSourceAdapter(options: {
       return createLocalContractWatcher({
         projectRoot: options.projectRoot,
         onChange() {
-          void callbacks.requestPrepare();
+          void callbacks.requestPrepare({
+            reason: "source_change"
+          });
         }
       });
     }

@@ -1,7 +1,8 @@
 import { resolveBundlingCaptions } from "@scriptorium/server-api";
 import { ActiveContentService } from "./content/active-content-service";
 import { CurrentAssetService } from "./content/current-asset-service";
-import { RefSourceService } from "./content/ref-source-service";
+import { PageArtifactService } from "./content/page/page-artifact-service";
+import { renderPreparedPageArtifact } from "./content/page/page-runtime-renderer";
 import { HealthController } from "./controllers/health-controller";
 import { ReadinessController } from "./controllers/readiness-controller";
 import { SearchController } from "./controllers/search-controller";
@@ -16,7 +17,7 @@ export interface ScriptoriumServerOptions {
 export class ScriptoriumServer {
   private readonly runtimeStatusService: RuntimeStatusService;
   private readonly activeContentService: ActiveContentService;
-  private readonly refSourceService = new RefSourceService();
+  private readonly pageArtifactService: PageArtifactService;
   private readonly currentAssetService: CurrentAssetService;
   private readonly searchIndexService: SearchIndexService;
   private readonly healthController = new HealthController();
@@ -26,6 +27,7 @@ export class ScriptoriumServer {
   constructor(private readonly options: ScriptoriumServerOptions) {
     this.runtimeStatusService = new RuntimeStatusService(options.stateFile);
     this.activeContentService = new ActiveContentService(this.runtimeStatusService, options.generationsDir);
+    this.pageArtifactService = new PageArtifactService(this.activeContentService);
     this.currentAssetService = new CurrentAssetService(this.activeContentService);
     this.searchIndexService = new SearchIndexService(this.runtimeStatusService, this.activeContentService);
     this.readinessController = new ReadinessController(this.runtimeStatusService);
@@ -53,17 +55,16 @@ export class ScriptoriumServer {
     return this.activeContentService.getPublishedVersions();
   }
 
-  async getSource(refName?: string) {
-    const active = await this.activeContentService.getActiveBundle();
-    const bundle = await active.bundle;
-    const resolvedRef = await this.activeContentService.resolveRefName(refName);
-    return this.refSourceService.getSource(bundle, resolvedRef);
+  async getPreparedPage(slugSegments: string[]) {
+    return this.pageArtifactService.getPage(slugSegments);
   }
 
   async getSidebarTree(refName: string) {
-    const active = await this.activeContentService.getActiveBundle();
-    const bundle = await active.bundle;
-    return this.refSourceService.getSidebarTree(bundle, refName);
+    return this.pageArtifactService.getSidebarTree(refName);
+  }
+
+  async resolvePreparedPageHref(refNameOrSlug: string, sourcePath: string, href: string) {
+    return this.pageArtifactService.resolveHref(refNameOrSlug, sourcePath, href);
   }
 
   async readCurrentAsset(assetSegments: string[]) {
@@ -91,3 +92,5 @@ export class ScriptoriumServer {
 export function createScriptoriumServer(options: ScriptoriumServerOptions) {
   return new ScriptoriumServer(options);
 }
+
+export { renderPreparedPageArtifact };

@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import type { LocalMarkdownPage } from "@fumadocs/local-md";
 import { hasUsableContent, toRefSlug } from "@scriptorium/server-api";
-import { getProjectConfig, getRuntimeReadiness, getSource } from "@/scriptorium";
+import {
+  getPreparedPage,
+  getProjectConfig,
+  getRuntimeReadiness,
+  renderPreparedPageArtifact,
+  resolvePreparedPageHref
+} from "@/scriptorium";
 import { getMDXComponents } from "@scriptorium/ui";
-import { createRelativeLink } from "fumadocs-ui/mdx";
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/layouts/docs/page";
+import type { ComponentProps, FC } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -23,30 +28,26 @@ export default async function DocsPageRoute(
     redirect(`/docs/${toRefSlug(config.versions.home)}`);
   }
 
-  const { source } = await getSource(slug[0]);
-  const page = source.getPage(slug);
-
+  const page = await getPreparedPage(slug);
   if (!page) {
     notFound();
   }
 
-  const localPage = page.data as LocalMarkdownPage<Record<string, unknown>, Record<string, unknown>>;
-  const { render } = await localPage.load();
-  const { body, toc } = await render(
-    getMDXComponents({
-      a: createRelativeLink(source as never, page as never)
-    })
-  );
+  const components = getMDXComponents();
+  const { body, toc } = await renderPreparedPageArtifact(page, {
+    ...components,
+    a: createPreparedRelativeLink(slug[0], page.sourcePath, components.a as FC<ComponentProps<"a">>)
+  });
 
   return (
     <DocsPage
-      toc={toc}
+      toc={toc as any}
       tableOfContent={{
         style: "clerk"
       }}
     >
-      <DocsTitle>{page.data.title}</DocsTitle>
-      <DocsDescription>{page.data.description}</DocsDescription>
+      <DocsTitle>{page.title}</DocsTitle>
+      <DocsDescription>{page.description}</DocsDescription>
       <DocsBody>{body}</DocsBody>
     </DocsPage>
   );
@@ -71,15 +72,28 @@ export async function generateMetadata(
     };
   }
 
-  const { source } = await getSource(slug[0]);
-  const page = source.getPage(slug);
-
+  const page = await getPreparedPage(slug);
   if (!page) {
     notFound();
   }
 
   return {
-    title: page.data.title,
-    description: page.data.description
+    title: page.title,
+    description: page.description
+  };
+}
+
+function createPreparedRelativeLink(
+  refSlug: string,
+  sourcePath: string,
+  OverrideLink: FC<ComponentProps<"a">>
+): FC<ComponentProps<"a">> {
+  return async function PreparedRelativeLink({ href, ...props }) {
+    return (
+      <OverrideLink
+        href={href ? await resolvePreparedPageHref(refSlug, sourcePath, href) : href}
+        {...props}
+      />
+    );
   };
 }

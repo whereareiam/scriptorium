@@ -29,7 +29,7 @@ export default async function DocsRootLayout(
   const currentRefSlug = slug[0] ?? toRefSlug(project.versions.home);
   const currentVersion = versions.find((version: PublishedVersion) => toRefSlug(version.name) === currentRefSlug) ?? versions[0];
   const currentRefName = currentVersion?.name ?? project.versions.home;
-  const tree = await getSidebarTree(currentRefName);
+  const tree = await getSidebarTree(currentRefName) as any;
   const homeUrl = `/docs/${toRefSlug(project.versions.home)}`;
   const logoUrl = resolveProjectAssetUrl(project.logo);
   const links = (project.links ?? []).map(toLayoutLink);

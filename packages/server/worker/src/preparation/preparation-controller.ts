@@ -1,14 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
+import type { PrepareRequest } from "@scriptorium/server-worker-api";
 import type { RuntimePaths } from "./model/runtime-paths";
 import type { RuntimePhase } from "./model/runtime-phase";
 import type { RuntimeReadinessStatus } from "./model/runtime-readiness-status";
+import type { BundlingLogger } from "./logging/bundling-logger";
 import { FileRuntimeStateStore } from "./persistence/file-runtime-state-store";
 
 interface PreparationContext {
   generationId: string;
   generationDir: string;
+  request: PrepareRequest | undefined;
   setPhase: (phase: Exclude<RuntimePhase, "idle" | "ready" | "error">) => void;
 }
 
@@ -22,7 +25,9 @@ export function createPreparationController<Value>(options: {
   runtimePaths: RuntimePaths;
   prepare: (context: PreparationContext) => Promise<Value>;
   activate: (result: PreparationResult<Value>) => Promise<void> | void;
+  getCompletionPayload?: (value: Value) => Record<string, unknown>;
   instanceId?: string;
+  logger?: BundlingLogger;
 }) {
   const instanceId = options.instanceId ?? String(process.pid);
   let status: RuntimeReadinessStatus = {
@@ -30,9 +35,24 @@ export function createPreparationController<Value>(options: {
   };
   let currentRun: Promise<void> | null = null;
   let rerunRequested = false;
+  let nextRequest: PrepareRequest | undefined;
   const stateStore = new FileRuntimeStateStore(options.runtimePaths.stateFile, instanceId);
 
-  function requestPrepare() {
+  function requestPrepare(request?: PrepareRequest) {
+    nextRequest = request ?? nextRequest;
+    options.logger?.emit("bundle_triggered", {
+      trigger_reason: request?.reason,
+      event_name: request?.event
+    });
+
+    if (currentRun) {
+      options.logger?.emit("bundle_rerun_queued", {
+        trigger_reason: request?.reason,
+        event_name: request?.event,
+        rerun_queued: true
+      });
+    }
+
     rerunRequested = true;
     if (currentRun)
       return currentRun;
@@ -56,9 +76,27 @@ export function createPreparationController<Value>(options: {
     const { generationsDir } = options.runtimePaths;
     await mkdir(generationsDir, { recursive: true });
 
+    const request = nextRequest;
+    nextRequest = undefined;
     const generationId = `${new Date().toISOString().replaceAll(":", "-")}-${randomUUID().slice(0, 8)}`;
     const generationDir = path.join(generationsDir, generationId);
     const startedAt = new Date().toISOString();
+    const phaseDurations = new Map<string, number>();
+    let activePhase: Exclude<RuntimePhase, "idle" | "ready" | "error"> = "bundling";
+    let activePhaseStartedAt = Date.now();
+
+    options.logger?.emit("bundle_started", {
+      run_id: generationId,
+      trigger_reason: request?.reason,
+      event_name: request?.event,
+      active_generation_id: status.activeGenerationId
+    });
+    options.logger?.emit("bundle_phase_started", {
+      run_id: generationId,
+      trigger_reason: request?.reason,
+      event_name: request?.event,
+      phase: activePhase
+    });
 
     status = {
       ...status,
@@ -73,7 +111,25 @@ export function createPreparationController<Value>(options: {
       const value = await options.prepare({
         generationId,
         generationDir,
+        request,
         setPhase(phase) {
+          const now = Date.now();
+          phaseDurations.set(activePhase, now - activePhaseStartedAt);
+          options.logger?.emit("bundle_phase_finished", {
+            run_id: generationId,
+            trigger_reason: request?.reason,
+            event_name: request?.event,
+            phase: activePhase,
+            duration_ms: now - activePhaseStartedAt
+          });
+          activePhase = phase;
+          activePhaseStartedAt = now;
+          options.logger?.emit("bundle_phase_started", {
+            run_id: generationId,
+            trigger_reason: request?.reason,
+            event_name: request?.event,
+            phase
+          });
           status = {
             ...status,
             phase
@@ -88,6 +144,16 @@ export function createPreparationController<Value>(options: {
         value
       });
 
+      const completedAt = Date.now();
+      phaseDurations.set(activePhase, completedAt - activePhaseStartedAt);
+      options.logger?.emit("bundle_phase_finished", {
+        run_id: generationId,
+        trigger_reason: request?.reason,
+        event_name: request?.event,
+        phase: activePhase,
+        duration_ms: completedAt - activePhaseStartedAt
+      });
+
       const finishedAt = new Date().toISOString();
       status = {
         phase: "ready",
@@ -98,7 +164,24 @@ export function createPreparationController<Value>(options: {
       };
 
       await stateStore.queueWrite(status);
+      options.logger?.emit("bundle_completed", {
+        run_id: generationId,
+        trigger_reason: request?.reason,
+        event_name: request?.event,
+        duration_ms: new Date(finishedAt).getTime() - new Date(startedAt).getTime(),
+        phase_durations_ms: Object.fromEntries(phaseDurations),
+        ...options.getCompletionPayload?.(value)
+      });
     } catch (error: unknown) {
+      const failedAt = Date.now();
+      phaseDurations.set(activePhase, failedAt - activePhaseStartedAt);
+      options.logger?.emit("bundle_phase_finished", {
+        run_id: generationId,
+        trigger_reason: request?.reason,
+        event_name: request?.event,
+        phase: activePhase,
+        duration_ms: failedAt - activePhaseStartedAt
+      });
       const persisted = await stateStore.read();
       status = {
         phase: "error",
@@ -109,6 +192,14 @@ export function createPreparationController<Value>(options: {
         error: error instanceof Error ? error.message : String(error)
       };
       await stateStore.queueWrite(status);
+      options.logger?.emit("bundle_failed", {
+        run_id: generationId,
+        trigger_reason: request?.reason,
+        event_name: request?.event,
+        duration_ms: Date.now() - new Date(startedAt).getTime(),
+        error: error instanceof Error ? error.message : String(error),
+        phase_durations_ms: Object.fromEntries(phaseDurations)
+      });
     }
   }
 
