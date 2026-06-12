@@ -70,7 +70,12 @@ export async function buildProjectBundle(options: {
           continue;
         }
 
-        versions.push(await exportVersion(projectRoot, repository, ref, outputDir));
+        const version = await exportVersion(projectRoot, repository, ref, outputDir, {
+          required: ref.name === workerProject.homeRefName
+        });
+        if (version) {
+          versions.push(version);
+        }
       }
     }
 
@@ -134,14 +139,25 @@ async function exportWorkingTreeVersion(projectRoot: string, versionName: string
   } satisfies StagedBundle["versions"][number];
 }
 
-async function exportVersion(projectRoot: string, repository: StageRepository, ref: SourceRef, outputDir: string) {
+async function exportVersion(
+  projectRoot: string,
+  repository: StageRepository,
+  ref: SourceRef,
+  outputDir: string,
+  options: { required: boolean }
+) {
   const versionRoot = path.join(outputDir, "versions", ref.name);
   const bundledContentDir = path.join(versionRoot, "content");
   const files = await repository.listFiles(ref.fullName, projectRoot);
   const prefixes = getContractPrefixes(projectRoot, repository.repoRoot);
+  const missingContractParts = resolveMissingContractParts(files, prefixes);
 
-  if (!files.some((entry) => entry.includes("/docs/content/") || entry.startsWith("docs/content/"))) {
-    throw new Error(`Ref "${ref.name}" does not contain docs/content files.`);
+  if (missingContractParts.length > 0) {
+    if (options.required) {
+      throw new Error(`Ref "${ref.name}" is missing required docs contract paths: ${missingContractParts.join(", ")}.`);
+    }
+
+    return null;
   }
 
   await mkdir(versionRoot, { recursive: true });
@@ -167,6 +183,25 @@ async function exportVersion(projectRoot: string, repository: StageRepository, r
     kind: ref.kind,
     contentDir: bundledContentDir
   } satisfies StagedBundle["versions"][number];
+}
+
+function resolveMissingContractParts(
+  files: string[],
+  prefixes: ReturnType<typeof getContractPrefixes>
+) {
+  const hasContent = files.some((entry) => entry.startsWith(prefixes.contentPrefix));
+  const hasConfig = files.includes(prefixes.configPath);
+  const missing: string[] = [];
+
+  if (!hasContent) {
+    missing.push("docs/content/**");
+  }
+
+  if (!hasConfig) {
+    missing.push("scriptorium.project.json");
+  }
+
+  return missing;
 }
 
 function resolvePreviewRefNames(project: WorkerProject) {
