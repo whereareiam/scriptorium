@@ -21,7 +21,6 @@ describe("projectConfigSchema", () => {
       versions: {
         home: "dev",
         include: [
-          { type: "branch", pattern: "release/*" },
           { type: "tag", pattern: "*" }
         ],
         meta: {

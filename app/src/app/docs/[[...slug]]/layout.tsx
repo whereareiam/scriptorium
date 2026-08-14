@@ -5,11 +5,9 @@ import type { ProjectLink, PublishedVersion, ScriptoriumProjectConfig } from "@s
 import { hasUsableContent, toRefSlug } from "@scriptorium/server-api";
 import { getProjectConfig, getPublishedVersions, getRuntimeReadiness, getSidebarTree } from "@/scriptorium";
 import { createConfiguredIcon } from "@scriptorium/ui";
-import { resolveProjectAssetUrl } from "../_layout/project-assets";
+import { resolveProjectAssetUrl } from "../../_layout/project-assets";
 
-export const dynamic = "force-dynamic";
-
-export default async function DocsRootLayout(
+export default async function DocsLayoutRoute(
   {
     children,
     params
@@ -18,15 +16,15 @@ export default async function DocsRootLayout(
     params: Promise<{ slug?: string[] }>;
   }
 ) {
+  const { slug } = await params;
   const readiness = await getRuntimeReadiness();
   if (!hasUsableContent(readiness)) {
     return children;
   }
 
-  const { slug = [] } = await params;
   const project = await getProjectConfig();
   const versions = await getPublishedVersions();
-  const currentRefSlug = slug[0] ?? toRefSlug(project.versions.home);
+  const currentRefSlug = slug?.[0] ?? toRefSlug(project.versions.home);
   const currentVersion = versions.find((version: PublishedVersion) => toRefSlug(version.name) === currentRefSlug) ?? versions[0];
   const currentRefName = currentVersion?.name ?? project.versions.home;
   const tree = await getSidebarTree(currentRefName) as any;

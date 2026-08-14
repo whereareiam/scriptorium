@@ -1,6 +1,7 @@
 .idea
 node_modules
 .next
+next-env.d.ts
 dist
 coverage
 .scriptorium
