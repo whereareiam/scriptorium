@@ -6,6 +6,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /** @type {import('next').NextConfig} */
 const config = {
   output: "standalone",
+  // Preserve RSC headers and query parameters for safe shared-cache decisions.
+  skipProxyUrlNormalize: true,
   reactStrictMode: true,
   transpilePackages: [
     "@scriptorium/server",

@@ -35,3 +35,6 @@ jobs:
           SCRIPTORIUM_DEFAULT_BRANCH: dev
           SCRIPTORIUM_DATA_DIR: /tmp/scriptorium-runtime
         run: bun run build
+
+      - name: Verify production cache and webhook behavior
+        run: bun run verify:production

@@ -15,8 +15,9 @@
     "dev:built": "bun run --cwd app dev:built",
     "build": "bun run --cwd app build",
     "typecheck": "bun run --cwd app typecheck",
-    "validate": "bun test && bun run --cwd app typecheck && bun run build",
-    "test": "bun test"
+    "validate": "bun test && bun run --cwd app typecheck && bun run build && bun run verify:production",
+    "test": "bun test",
+    "verify:production": "bun scripts/verify-production.mjs"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.4",
