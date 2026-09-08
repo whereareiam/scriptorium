@@ -12,8 +12,8 @@ test("transient DNS failures retry within the current request", async () => {
   expect(delays).toEqual([1000, 2000]);
 });
 
-test("persistent transport errors stop after three attempts and authentication errors are not retried", async () => {
-  for (const [message, expectedAttempts] of [["Could not resolve host: github.com", 3], ["Authentication failed", 1]] as const) {
+test("persistent transport errors stop after five attempts and authentication errors are not retried", async () => {
+  for (const [message, expectedAttempts] of [["Could not resolve host: github.com", 5], ["Authentication failed", 1]] as const) {
     let attempts = 0;
     await expect(retryNetworkFetch(async () => { attempts++; throw new Error(message); }, async () => {})).rejects.toThrow(message);
     expect(attempts).toBe(expectedAttempts);
