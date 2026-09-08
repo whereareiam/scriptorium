@@ -52,24 +52,25 @@ try {
   const initial = await state();
   console.log("Checking production HTML and request variants");
   const html = await checkedFetch(base + "/docs/dev");
-  assert.equal(html.headers.get("cloudflare-cdn-cache-control"), "public, max-age=30");
+  assert.equal(html.headers.get("cdn-cache-control"), "public, max-age=30");
+  assert.equal(html.headers.get("cloudflare-cdn-cache-control"), null, "Provider-specific headers belong to the deployment");
   assert.match(html.headers.get("content-type"), /text\/html/);
   await html.arrayBuffer();
   for (const headers of [{ RSC: "1" }, { RSC: "1", "Next-Router-Prefetch": "1" }, { Authorization: "Bearer fixture" }, { Cookie: "fixture=1" }]) {
     console.log("Checking headers", JSON.stringify(headers));
     const response = await checkedFetch(base + "/docs/dev", { headers });
-    assert.equal(response.headers.get("cloudflare-cdn-cache-control"), "no-store", JSON.stringify(headers));
+    assert.equal(response.headers.get("cdn-cache-control"), "no-store", JSON.stringify(headers));
     if (headers.RSC) assert.match(response.headers.get("content-type"), /text\/x-component/);
     await response.arrayBuffer();
   }
   for (const route of ["/docs/dev?_rsc=invalid", "/docs/dev?tracking=fixture", "/api/health", "/api/health/ready"]) {
     console.log("Checking route", route);
     const response = await checkedFetch(base + route);
-    assert.equal(response.headers.get("cloudflare-cdn-cache-control"), "no-store", route);
+    assert.equal(response.headers.get("cdn-cache-control"), "no-store", route);
     await response.arrayBuffer();
   }
   const search = await checkedFetch(base + "/api/search?ref=dev");
-  assert.equal(search.headers.get("cloudflare-cdn-cache-control"), "public, max-age=30");
+  assert.equal(search.headers.get("cdn-cache-control"), "public, max-age=30");
   await search.arrayBuffer();
   await writeFile(page, "---\ntitle: Cache fixture\n---\nUpdated through webhook.\n");
   commit();
@@ -80,7 +81,7 @@ try {
   await accepted.arrayBuffer();
   await waitFor(async () => { const s = await state(); return s.phase === "ready" && s.activeGenerationId !== initial.activeGenerationId; }, "webhook publication");
   const fresh = await checkedFetch(base + "/docs/dev", { headers: { RSC: "1" } });
-  assert.equal(fresh.headers.get("cloudflare-cdn-cache-control"), "no-store");
+  assert.equal(fresh.headers.get("cdn-cache-control"), "no-store");
   assert.ok((await fresh.text()).includes("Updated through webhook."));
   console.log("Production verification passed: HTML/search cache headers, RSC/auth/cookie/query bypass, health bypass, and webhook publication.");
 } catch (error) {

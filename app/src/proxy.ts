@@ -17,8 +17,7 @@ export async function proxy(request: NextRequest) {
     }
   }
   const response = NextResponse.next();
-  response.headers.set("Cloudflare-CDN-Cache-Control", edgeCacheControl(request, hasContent));
-  response.headers.set("CDN-Cache-Control", "no-store");
+  response.headers.set("CDN-Cache-Control", edgeCacheControl(request, hasContent));
   return response;
 }
 

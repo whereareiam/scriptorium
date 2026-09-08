@@ -140,15 +140,17 @@ Startup bundling uses a shorter readiness poll. Published content refreshes use
 an RSC request so an open tab can receive the new generation without reloading
 an edge-cached HTML response.
 
-For public documentation behind Cloudflare, configure Cache Rules to make only
-anonymous HTML, assets, and `/api/search` eligible, respect origin cache headers,
-and respect the origin browser TTL. The application emits
-`Cloudflare-CDN-Cache-Control: public, max-age=30` only when usable content exists.
-HTML with query strings, RSC/router variants, cookies, authorization, health, and
-webhook requests must bypass the shared cache. Apply the same request exclusions
-in the edge rule so a cached HTML response cannot satisfy an RSC request. Never
-use a blanket rule that ignores origin cache directives. New visitors may see a
-previous generation for up to 30 seconds; webhook processing remains immediate.
+For public documentation behind a shared cache, configure the CDN or reverse
+proxy to respect the standard `CDN-Cache-Control` response header and the origin
+browser TTL. Scriptorium emits `public, max-age=30` only when usable content
+exists and the request is safe to share. It emits `no-store` for warmup, RSC/router
+variants, cookies, authorization, health, and document query strings.
+
+Apply the same request exclusions at the cache so a cached HTML response cannot
+satisfy an RSC or private request. Webhooks must bypass caching. Provider-specific
+header translation and cache rules belong in the deployment's ingress or proxy;
+Scriptorium does not require a particular CDN. New visitors may see a previous
+generation for up to the shared cache TTL; webhook processing remains immediate.
 
 Webhook HMAC verification streams the raw body, rejects missing or malformed
 signatures before reading it, and caps payloads at 25 MiB. Over-limit requests
