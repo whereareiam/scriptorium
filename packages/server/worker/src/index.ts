@@ -1,6 +1,7 @@
 import type { ScriptoriumProjectConfig } from "@scriptorium/server-api";
 import type { WorkerProject, WorkerService } from "@scriptorium/server-worker-api";
 import type { SourceAdapter } from "@scriptorium/source-api";
+import { getContentFingerprint } from "./bundle/content-fingerprint";
 import { buildProjectBundle } from "./bundle/build-project-bundle";
 import { buildServedArtifacts, type BuiltServedArtifacts } from "./bundle/served/build/build-served-artifacts";
 import { writeServedBundleManifest } from "./bundle/content";
@@ -17,6 +18,8 @@ export function createWorkerService(options: {
   }>;
 }): WorkerService {
   const logger = new BundlingLogger(options.sourceAdapter.type);
+  let lastBuiltFingerprint: string | undefined;
+  let lastBuiltGenerationId: string | undefined;
   const preparationController = createPreparationController<BuiltServedArtifacts>({
     runtimePaths: options.runtimePaths,
     logger,
@@ -28,7 +31,7 @@ export function createWorkerService(options: {
         search_document_count: value.search_document_count
       };
     },
-    async prepare({ generationDir, request, setPhase }) {
+    async prepare({ generationId, generationDir, activeGenerationId, request, setPhase }) {
       const bundleDir = `${generationDir}/bundle`;
       const { projectRoot, repository } = await options.sourceAdapter.prepareRepository();
       const stagedBundle = await buildProjectBundle({
@@ -38,15 +41,26 @@ export function createWorkerService(options: {
         loadProject: options.loadProject
       });
 
+      const fingerprint = await getContentFingerprint(bundleDir, stagedBundle.project);
+      if (activeGenerationId === lastBuiltGenerationId && fingerprint === lastBuiltFingerprint)
+        return null;
+
       const servedArtifacts = await buildServedArtifacts(stagedBundle, generationDir, {
         logger,
         request,
         setPhase
       });
       await writeServedBundleManifest(bundleDir, servedArtifacts.manifest);
+      lastBuiltFingerprint = fingerprint;
+      lastBuiltGenerationId = generationId;
       return servedArtifacts;
     },
-    activate: async () => undefined
+    activate: async () => undefined,
+    onIdle() {
+      // Run after the preparation promise unwinds, releasing temporary compiler allocations.
+      if (typeof Bun !== "undefined")
+        setTimeout(() => Bun.gc(true), 0).unref();
+    }
   });
 
   let started = false;

@@ -1,4 +1,4 @@
-FROM oven/bun:1 AS runner
+FROM oven/bun:1.4.2 AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production
@@ -37,4 +37,4 @@ RUN mkdir -p /data/scriptorium \
 EXPOSE 3000
 USER bun
 ENTRYPOINT ["./docker/entrypoint.sh"]
-CMD ["bun", "server.js"]
+CMD ["bun", "--smol", "server.js"]

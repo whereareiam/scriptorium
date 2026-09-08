@@ -116,7 +116,25 @@ Example git-backed config:
 ```
 
 Runtime refresh is webhook-driven in `git` mode and file-watch-driven in `local` mode.
-There is no scheduled refresh interval.
+There is no scheduled refresh interval. A valid GitHub webhook returns `202` after
+queueing preparation; check `/api/health/ready` and the bundle logs for completion.
+Changes to docs, included partials, assets, project settings, and published versions
+are bundled inside the running application. Content updates do not require an
+image build or redeployment.
+
+When the staged content is unchanged, the runtime logs `bundle_skipped` and keeps
+the current content token, so open pages do not reload. A changed bundle is
+published only after preparation succeeds; failed preparations keep the previous
+content available. Git tags that move are synchronized into the disposable cache.
+The active generation and its predecessor are retained. Older generations are
+removed during subsequent preparation checks after a one-minute reader grace period.
+
+The container uses `bun --smol server.js` and releases temporary compiler
+allocations after preparation. For a small, lightly used documentation site,
+`500m` CPU and `384Mi` memory limits are a starting point; measure your own corpus
+and traffic before reducing them. Browser tabs check for updated content every
+30 seconds while visible and immediately when they become visible again.
+Startup bundling uses a shorter readiness poll.
 
 `scriptorium.project.json` groups version publishing under one `versions` block:
 

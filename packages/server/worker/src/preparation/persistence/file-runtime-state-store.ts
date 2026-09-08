@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { RuntimeReadinessStatus } from "../model/runtime-readiness-status";
 import type { PersistedRuntimeState } from "./persisted-runtime-state";
@@ -39,7 +39,6 @@ async function writeRuntimeState(stateFile: string, state: PersistedRuntimeState
   const tmpPath = `${stateFile}.${randomUUID().slice(0, 8)}.tmp`;
   await mkdir(path.dirname(stateFile), { recursive: true });
   await writeFile(tmpPath, JSON.stringify(state, null, 2));
-  await rm(stateFile, { force: true }).catch(() => undefined);
   await rename(tmpPath, stateFile);
 }
 

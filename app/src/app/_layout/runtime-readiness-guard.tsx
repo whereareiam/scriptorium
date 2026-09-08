@@ -56,12 +56,19 @@ export function RuntimeReadinessGuard(
     }
 
     const interval = window.setInterval(() => {
-      void checkReadiness();
-    }, 1500);
+      if (document.visibilityState === "visible")
+        void checkReadiness();
+    }, 30_000);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible")
+        void checkReadiness();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       disposed = true;
       window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [currentContentToken]);
 

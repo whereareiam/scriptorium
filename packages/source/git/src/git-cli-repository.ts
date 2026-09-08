@@ -53,6 +53,33 @@ export function createGitCliStageRepository(projectRoot: string): StageRepositor
     async readFile(refName, filePath) {
       return readGitFile(repoRoot, refName, filePath);
     },
+    async readFiles(refName, filePaths) {
+      if (filePaths.length === 0)
+        return new Map();
+
+      const output = execFileSync("git", ["cat-file", "--batch", "-z"], {
+        cwd: repoRoot,
+        input: filePaths.map(filePath => `${refName}:${filePath}\0`).join(""),
+        maxBuffer: 64 * 1024 * 1024
+      });
+      const files = new Map<string, Buffer>();
+      let offset = 0;
+      for (const filePath of filePaths) {
+        const end = output.indexOf(10, offset);
+        const header = output.subarray(offset, end).toString("utf8");
+        const match = /^[a-f0-9]+ blob (\d+)$/.exec(header);
+        if (end < 0 || !match)
+          throw new Error(`Unable to read Git blob ${refName}:${filePath}: ${header}`);
+
+        const size = Number(match[1]);
+        offset = end + 1;
+        if (offset + size >= output.length || output[offset + size] !== 10)
+          throw new Error(`Truncated Git blob ${refName}:${filePath}.`);
+        files.set(filePath, output.subarray(offset, offset + size));
+        offset += size + 1;
+      }
+      return files;
+    },
     async getCurrentBranch() {
       try {
         return runGit(repoRoot, ["branch", "--show-current"]);

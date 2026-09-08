@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { syncGitCliRepository } from "./git-cli-repository";
+import { createGitCliStageRepository, syncGitCliRepository } from "./git-cli-repository";
 
 const temporaryDirectories: string[] = [];
 
@@ -57,3 +57,23 @@ describe("syncGitCliRepository", () => {
 function git(cwd: string, ...args: string[]) {
   return execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 }
+
+
+test("bulk Git reads preserve binary and empty files and reject missing blobs", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "scriptorium-git-batch-"));
+  temporaryDirectories.push(root);
+  git(root, "init", "--initial-branch", "dev");
+  git(root, "config", "user.name", "Scriptorium Test");
+  git(root, "config", "user.email", "scriptorium@example.invalid");
+  git(root, "config", "commit.gpgSign", "false");
+  const binary = Buffer.from([0, 10, 255, 13, 1]);
+  await writeFile(path.join(root, "binary file"), binary);
+  await writeFile(path.join(root, "empty"), "");
+  git(root, "add", ".");
+  git(root, "commit", "-m", "Add binary fixture");
+  const repository = createGitCliStageRepository(root);
+  const files = await repository.readFiles!("dev", ["binary file", "empty"]);
+  expect(files.get("binary file")).toEqual(binary);
+  expect(files.get("empty")).toEqual(Buffer.alloc(0));
+  await expect(repository.readFiles!("dev", ["missing"])).rejects.toThrow("Unable to read Git blob");
+});

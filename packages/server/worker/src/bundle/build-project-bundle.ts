@@ -162,6 +162,7 @@ async function exportVersion(
 
   await mkdir(versionRoot, { recursive: true });
 
+  const contents = await repository.readFiles?.(ref.fullName, files);
   for (const filePath of files) {
     let destination = path.join(versionRoot, "scriptorium.project.json");
     if (filePath.startsWith(prefixes.contentPrefix)) {
@@ -171,7 +172,7 @@ async function exportVersion(
     }
 
     await mkdir(path.dirname(destination), { recursive: true });
-    const content = await repository.readFile(ref.fullName, filePath);
+    const content = contents?.get(filePath) ?? await repository.readFile(ref.fullName, filePath);
     await writeFile(destination, content);
   }
 

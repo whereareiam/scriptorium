@@ -14,6 +14,7 @@ export interface StageRepository {
   listRefs(): Promise<SourceRef[]>;
   listFiles(refName: string, projectRoot: string): Promise<string[]>;
   readFile(refName: string, filePath: string): Promise<Buffer>;
+  readFiles?(refName: string, filePaths: string[]): Promise<Map<string, Buffer>>;
   getCurrentBranch?(): Promise<string>;
   isWorktreeDirty?(): Promise<boolean>;
 }

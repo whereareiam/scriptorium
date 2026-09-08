@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import type { PrepareRequest } from "@scriptorium/server-worker-api";
 import type { RuntimePaths } from "./model/runtime-paths";
@@ -7,10 +7,12 @@ import type { RuntimePhase } from "./model/runtime-phase";
 import type { RuntimeReadinessStatus } from "./model/runtime-readiness-status";
 import type { BundlingLogger } from "./logging/bundling-logger";
 import { FileRuntimeStateStore } from "./persistence/file-runtime-state-store";
+import { pruneGenerations } from "./prune-generations";
 
 interface PreparationContext {
   generationId: string;
   generationDir: string;
+  activeGenerationId?: string;
   request: PrepareRequest | undefined;
   setPhase: (phase: Exclude<RuntimePhase, "idle" | "ready" | "error">) => void;
 }
@@ -23,9 +25,10 @@ interface PreparationResult<Value> {
 
 export function createPreparationController<Value>(options: {
   runtimePaths: RuntimePaths;
-  prepare: (context: PreparationContext) => Promise<Value>;
+  prepare: (context: PreparationContext) => Promise<Value | null>;
   activate: (result: PreparationResult<Value>) => Promise<void> | void;
   getCompletionPayload?: (value: Value) => Record<string, unknown>;
+  onIdle?: () => void;
   instanceId?: string;
   logger?: BundlingLogger;
 }) {
@@ -36,6 +39,7 @@ export function createPreparationController<Value>(options: {
   let currentRun: Promise<void> | null = null;
   let rerunRequested = false;
   let nextRequest: PrepareRequest | undefined;
+  let fallbackGenerationId: string | undefined;
   const stateStore = new FileRuntimeStateStore(options.runtimePaths.stateFile, instanceId);
 
   function requestPrepare(request?: PrepareRequest) {
@@ -60,6 +64,7 @@ export function createPreparationController<Value>(options: {
     currentRun = runPreparationLoop()
       .finally(() => {
         currentRun = null;
+        options.onIdle?.();
       });
 
     return currentRun;
@@ -98,6 +103,7 @@ export function createPreparationController<Value>(options: {
       phase: activePhase
     });
 
+    const previousStatus = status;
     status = {
       ...status,
       phase: "bundling",
@@ -111,10 +117,11 @@ export function createPreparationController<Value>(options: {
       const value = await options.prepare({
         generationId,
         generationDir,
+        activeGenerationId: previousStatus.activeGenerationId,
         request,
         setPhase(phase) {
           const now = Date.now();
-          phaseDurations.set(activePhase, now - activePhaseStartedAt);
+          phaseDurations.set(activePhase, (phaseDurations.get(activePhase) ?? 0) + now - activePhaseStartedAt);
           options.logger?.emit("bundle_phase_finished", {
             run_id: generationId,
             trigger_reason: request?.reason,
@@ -138,6 +145,23 @@ export function createPreparationController<Value>(options: {
         }
       });
 
+      if (value === null) {
+        if (!previousStatus.activeGenerationId)
+          throw new Error("Cannot skip preparation without an active generation.");
+        await rm(generationDir, { recursive: true, force: true });
+        status = { ...previousStatus, phase: "ready", error: undefined };
+        await stateStore.queueWrite(status);
+        options.logger?.emit("bundle_skipped", {
+          run_id: generationId,
+          active_generation_id: status.activeGenerationId,
+          trigger_reason: request?.reason,
+          event_name: request?.event,
+          duration_ms: Date.now() - new Date(startedAt).getTime()
+        });
+        await cleanupGenerations();
+        return;
+      }
+
       await options.activate({
         generationId,
         generationDir,
@@ -145,7 +169,7 @@ export function createPreparationController<Value>(options: {
       });
 
       const completedAt = Date.now();
-      phaseDurations.set(activePhase, completedAt - activePhaseStartedAt);
+      phaseDurations.set(activePhase, (phaseDurations.get(activePhase) ?? 0) + completedAt - activePhaseStartedAt);
       options.logger?.emit("bundle_phase_finished", {
         run_id: generationId,
         trigger_reason: request?.reason,
@@ -164,6 +188,7 @@ export function createPreparationController<Value>(options: {
       };
 
       await stateStore.queueWrite(status);
+      fallbackGenerationId = previousStatus.activeGenerationId;
       options.logger?.emit("bundle_completed", {
         run_id: generationId,
         trigger_reason: request?.reason,
@@ -172,9 +197,11 @@ export function createPreparationController<Value>(options: {
         phase_durations_ms: Object.fromEntries(phaseDurations),
         ...options.getCompletionPayload?.(value)
       });
+      await cleanupGenerations();
     } catch (error: unknown) {
+      await rm(generationDir, { recursive: true, force: true }).catch(() => undefined);
       const failedAt = Date.now();
-      phaseDurations.set(activePhase, failedAt - activePhaseStartedAt);
+      phaseDurations.set(activePhase, (phaseDurations.get(activePhase) ?? 0) + failedAt - activePhaseStartedAt);
       options.logger?.emit("bundle_phase_finished", {
         run_id: generationId,
         trigger_reason: request?.reason,
@@ -199,6 +226,17 @@ export function createPreparationController<Value>(options: {
         duration_ms: Date.now() - new Date(startedAt).getTime(),
         error: error instanceof Error ? error.message : String(error),
         phase_durations_ms: Object.fromEntries(phaseDurations)
+      });
+    }
+  }
+
+  async function cleanupGenerations() {
+    try {
+      await pruneGenerations(options.runtimePaths.generationsDir,
+        [status.activeGenerationId, fallbackGenerationId].filter((id): id is string => Boolean(id)));
+    } catch (error) {
+      options.logger?.emit("generation_cleanup_failed", {
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
