@@ -106,7 +106,8 @@ export async function syncGitCliRepository(options: {
     runGitIn(repoDir, ["remote", "add", "origin", repoUrl], { env: environment });
   }
 
-  runGitIn(repoDir, ["fetch", "--prune", "--prune-tags", "--tags", "origin"], { env: environment });
+  // This disposable cache mirrors the source, including tags that have moved.
+  runGitIn(repoDir, ["fetch", "--force", "--prune", "--prune-tags", "--tags", "origin"], { env: environment });
   runGitIn(repoDir, ["checkout", "-B", defaultBranch, `origin/${defaultBranch}`], { env: environment });
   runGitIn(repoDir, ["reset", "--hard", `origin/${defaultBranch}`], { env: environment });
 }
