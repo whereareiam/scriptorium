@@ -121,6 +121,8 @@ queueing preparation; check `/api/health/ready` and the bundle logs for completi
 Changes to docs, included partials, assets, project settings, and published versions
 are bundled inside the running application. Content updates do not require an
 image build or redeployment.
+Transient Git DNS and connection failures get up to three attempts within that
+preparation request. Network fetches run asynchronously so health checks remain responsive.
 
 When the staged content is unchanged, the runtime logs `bundle_skipped` and keeps
 the current content token, so open pages do not reload. A changed bundle is

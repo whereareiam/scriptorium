@@ -1,12 +1,16 @@
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { mkdir, realpath, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 import {
   filterBundledContractPaths,
   normalizeRepoRelativePath,
   type StageRepository
 } from "@scriptorium/source-api";
 import { getRepositoryRoot, listGitRefs } from "./git-source";
+import { retryNetworkFetch } from "./retry-network-fetch";
+
+const execFileAsync = promisify(execFile);
 
 function runGit(repoRoot: string, args: string[]) {
   return execFileSync("git", args, {
@@ -134,7 +138,14 @@ export async function syncGitCliRepository(options: {
   }
 
   // This disposable cache mirrors the source, including tags that have moved.
-  runGitIn(repoDir, ["fetch", "--force", "--prune", "--prune-tags", "--tags", "origin"], { env: environment });
+  await retryNetworkFetch(async () => {
+    const { stderr } = await execFileAsync("git", ["fetch", "--force", "--prune", "--prune-tags", "--tags", "origin"], {
+      cwd: repoDir,
+      env: environment,
+      encoding: "utf8"
+    });
+    if (stderr) process.stderr.write(stderr);
+  });
   runGitIn(repoDir, ["checkout", "-B", defaultBranch, `origin/${defaultBranch}`], { env: environment });
   runGitIn(repoDir, ["reset", "--hard", `origin/${defaultBranch}`], { env: environment });
 }
