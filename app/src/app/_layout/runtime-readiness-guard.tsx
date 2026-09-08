@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { RuntimeWarmupScreen } from "./warmup/runtime-warmup-screen";
 
 export function RuntimeReadinessGuard(
@@ -14,6 +15,7 @@ export function RuntimeReadinessGuard(
     children: ReactNode;
   }
 ) {
+  const router = useRouter();
   const [blocked, setBlocked] = useState(false);
   const [currentContentToken, setCurrentContentToken] = useState(contentToken);
 
@@ -48,7 +50,8 @@ export function RuntimeReadinessGuard(
         const nextToken = nextStatus.state?.content?.token;
         if (nextToken && nextToken !== currentContentToken) {
           setCurrentContentToken(nextToken);
-          window.location.reload();
+          // Router refresh requests RSC, which bypasses the shared HTML cache.
+          router.refresh();
         }
       } catch {
         // Keep the current page visible on transient polling failures.
@@ -70,7 +73,7 @@ export function RuntimeReadinessGuard(
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [currentContentToken]);
+  }, [currentContentToken, router]);
 
   if (blocked) {
     return <RuntimeWarmupScreen captions={captions} />;

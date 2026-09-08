@@ -3,7 +3,7 @@ export interface TriggerResult {
   operation: "webhook" | "refresh_requested";
   event?: string;
   error?: {
-    code: "SOURCE_DISABLED" | "INVALID_SIGNATURE";
+    code: "SOURCE_DISABLED" | "INVALID_SIGNATURE" | "PAYLOAD_TOO_LARGE";
     message: string;
   };
   status: number;

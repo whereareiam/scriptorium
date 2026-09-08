@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { verifyWebhook } from "./verify-webhook";
 import type { WorkerService } from "@scriptorium/server-worker-api";
 import type { TriggerHandler, TriggerResult } from "@scriptorium/trigger-api";
 
@@ -10,11 +10,18 @@ export function createGitHubTriggerHandler(options: {
 }): TriggerHandler {
   return {
     async handle(request) {
-      const payload = await request.text();
-      const signature = request.headers.get("x-hub-signature-256");
+      if (!options.secret) throw new Error("Webhook secret is not configured.");
+      const verification = await verifyWebhook(request, options.secret);
       const event = request.headers.get("x-github-event");
 
-      if (!verifyGitHubWebhookSignature(payload, signature, options.secret)) {
+      if (verification === "too_large") {
+        return {
+          kind: "failed", operation: "webhook", status: 413,
+          error: { code: "PAYLOAD_TOO_LARGE", message: "Webhook payload exceeds 25 MiB." }
+        } satisfies TriggerResult;
+      }
+
+      if (verification !== "valid") {
         return {
           kind: "failed",
           operation: "webhook",
@@ -59,21 +66,4 @@ export function createGitHubTriggerHandler(options: {
       } satisfies TriggerResult;
     }
   };
-}
-
-function verifyGitHubWebhookSignature(payload: string, signatureHeader: string | null, secret?: string) {
-  if (!secret)
-    throw new Error("Webhook secret is not configured.");
-
-  if (!signatureHeader?.startsWith("sha256="))
-    return false;
-
-  const expected = createHmac("sha256", secret).update(payload).digest("hex");
-  const actual = signatureHeader.slice("sha256=".length);
-
-  try {
-    return timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(actual, "hex"));
-  } catch {
-    return false;
-  }
 }

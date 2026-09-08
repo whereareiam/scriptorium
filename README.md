@@ -136,7 +136,24 @@ allocations after preparation. For a small, lightly used documentation site,
 `500m` CPU and `384Mi` memory limits are a starting point; measure your own corpus
 and traffic before reducing them. Browser tabs check for updated content every
 30 seconds while visible and immediately when they become visible again.
-Startup bundling uses a shorter readiness poll.
+Startup bundling uses a shorter readiness poll. Published content refreshes use
+an RSC request so an open tab can receive the new generation without reloading
+an edge-cached HTML response.
+
+For public documentation behind Cloudflare, configure Cache Rules to make only
+anonymous HTML, assets, and `/api/search` eligible, respect origin cache headers,
+and respect the origin browser TTL. The application emits
+`Cloudflare-CDN-Cache-Control: public, max-age=30` only when usable content exists.
+HTML with query strings, RSC/router variants, cookies, authorization, health, and
+webhook requests must bypass the shared cache. Apply the same request exclusions
+in the edge rule so a cached HTML response cannot satisfy an RSC request. Never
+use a blanket rule that ignores origin cache directives. New visitors may see a
+previous generation for up to 30 seconds; webhook processing remains immediate.
+
+Webhook HMAC verification streams the raw body, rejects missing or malformed
+signatures before reading it, and caps payloads at 25 MiB. Over-limit requests
+receive HTTP 413. The webhook route should be excluded from browser challenges,
+while application signature verification remains mandatory.
 
 `scriptorium.project.json` groups version publishing under one `versions` block:
 
