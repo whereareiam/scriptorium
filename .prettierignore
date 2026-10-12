@@ -1,9 +1,9 @@
 node_modules
 .next
 .scriptorium
-build
-coverage
-dist
+/build
+/coverage
+/dist
 bun.lock
 .claude
 # Shared with the other whereareiam repositories, kept identical to their copies.
