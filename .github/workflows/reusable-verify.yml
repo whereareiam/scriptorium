@@ -1,0 +1,87 @@
+name: Verify
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit, branch or tag to verify.
+        required: true
+        type: string
+      version:
+        description: Version the build is verified as; defaults to <branch>-<short commit>.
+        required: false
+        type: string
+        default: ""
+    outputs:
+      version:
+        description: Version that was verified.
+        value: ${{ jobs.build.outputs.version }}
+      commit:
+        description: Commit that was verified.
+        value: ${{ jobs.build.outputs.commit }}
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.identity.outputs.version }}
+      commit: ${{ steps.identity.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Resolve build identity
+        id: identity
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          set -euo pipefail
+          commit="$(git rev-parse HEAD)"
+          version="${REQUESTED_VERSION#v}"
+          [[ -n "$version" ]] || version="${BRANCH//\//-}-${commit::7}"
+          [[ "$version" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]*$ ]] || { echo "Invalid version: $version" >&2; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun ci
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: |
+          mkdir -p build/test-results/bun
+          bun test --reporter=junit --reporter-outfile=build/test-results/bun/junit.xml
+
+      - name: Build
+        env:
+          SCRIPTORIUM_REPO_URL: https://github.com/whereareiam/Identica.git
+          SCRIPTORIUM_DEFAULT_BRANCH: dev
+          SCRIPTORIUM_DATA_DIR: /tmp/scriptorium-runtime
+        run: bun run build
+
+      - name: Verify production cache and webhook behavior
+        run: bun run verify:production
+
+      - uses: whereareiam/devops/primitive/report/junit/publish@v3
+        if: always()
+        with:
+          name: Test results
+          artifact-name: test-results
+          results: build/test-results/**/*.xml
+          reports: build/test-results/**

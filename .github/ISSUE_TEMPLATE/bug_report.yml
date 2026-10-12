@@ -1,0 +1,71 @@
+name: Bug report
+description: Something in Scriptorium does not work as documented.
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask on [Discord](https://discord.arcadeya.com) for setup help. Report vulnerabilities privately through the [security policy](https://github.com/whereareiam/scriptorium/security/policy).
+
+  - type: input
+    id: version
+    attributes:
+      label: Scriptorium version
+      description: The release, for example `1.2.0`, or the commit you run.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source
+      options:
+        - Git repository
+        - Local folder
+    validations:
+      required: true
+
+  - type: input
+    id: project
+    attributes:
+      label: Published project
+      description: The repository whose docs show the problem, if it is public.
+      placeholder: https://github.com/whereareiam/Identica
+
+  - type: input
+    id: page
+    attributes:
+      label: Page
+      description: The URL of a page that shows the problem.
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open /ru/docs/dev
+        2. Search for ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: The bundle log lines (JSON) around the problem.
+      render: text
+
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Configuration
+      description: The relevant parts of `scriptorium.json` and `scriptorium.project.json`. Remove tokens and webhook secrets.
+      render: json
