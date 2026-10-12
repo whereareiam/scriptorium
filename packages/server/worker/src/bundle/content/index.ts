@@ -1,1 +1,1 @@
-export { writeServedBundleManifest } from "./write-served-bundle-manifest";
+export { writeServedBundleManifest } from './write-served-bundle-manifest'

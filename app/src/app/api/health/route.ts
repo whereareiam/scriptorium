@@ -1,7 +1,7 @@
-import { handleHealthRequest } from "@/scriptorium";
+import { handleHealthRequest } from '@/scriptorium'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  return handleHealthRequest();
+  return handleHealthRequest()
 }

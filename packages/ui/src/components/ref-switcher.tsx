@@ -1,36 +1,36 @@
-"use client";
+'use client'
 
-import { usePathname, useRouter } from "next/navigation";
-import type { ChangeEvent } from "react";
+import { usePathname, useRouter } from 'next/navigation'
+import type { ChangeEvent } from 'react'
 
 export interface RefOption {
-  name: string;
-  kind: "branch" | "tag";
-  label?: string;
+  name: string
+  kind: 'branch' | 'tag'
+  label?: string
 }
 
 export interface RefSwitcherProps {
-  activeRef: string;
-  refs: RefOption[];
+  activeRef: string
+  refs: RefOption[]
 }
 
 function replaceRefInPathname(pathname: string, nextRef: string) {
-  const segments = pathname.split("/");
+  const segments = pathname.split('/')
 
-  if (segments.length < 3 || segments[1] !== "docs") {
-    return `/docs/${nextRef}`;
+  if (segments.length < 3 || segments[1] !== 'docs') {
+    return `/docs/${nextRef}`
   }
 
-  segments[2] = nextRef;
-  return segments.join("/") || `/docs/${nextRef}`;
+  segments[2] = nextRef
+  return segments.join('/') || `/docs/${nextRef}`
 }
 
 export function RefSwitcher({ activeRef, refs }: RefSwitcherProps) {
-  const pathname = usePathname();
-  const router = useRouter();
+  const pathname = usePathname()
+  const router = useRouter()
 
   function onChange(event: ChangeEvent<HTMLSelectElement>) {
-    router.push(replaceRefInPathname(pathname, event.target.value));
+    router.push(replaceRefInPathname(pathname, event.target.value))
   }
 
   return (
@@ -42,11 +42,14 @@ export function RefSwitcher({ activeRef, refs }: RefSwitcherProps) {
         onChange={onChange}
       >
         {refs.map((ref) => (
-          <option key={ref.name} value={ref.name}>
+          <option
+            key={ref.name}
+            value={ref.name}
+          >
             {ref.label ?? ref.name} ({ref.kind})
           </option>
         ))}
       </select>
     </label>
-  );
+  )
 }

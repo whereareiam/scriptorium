@@ -1,19 +1,19 @@
-import type { ActiveContentService } from "./active-content-service";
-import { createCurrentAssetReader } from "./current-asset-reader";
+import type { ActiveContentService } from './active-content-service'
+import { createCurrentAssetReader } from './current-asset-reader'
 
 export class CurrentAssetService {
-  private readonly readAsset;
+  private readonly readAsset
 
   constructor(private readonly activeContentService: ActiveContentService) {
     this.readAsset = createCurrentAssetReader({
       getCurrentAssetsDir: async () => {
-        const active = await this.activeContentService.getActiveBundle();
-        return (await active.bundle).currentAssetsDir;
-      }
-    });
+        const active = await this.activeContentService.getActiveBundle()
+        return (await active.bundle).currentAssetsDir
+      },
+    })
   }
 
   readCurrentAsset(assetSegments: string[]) {
-    return this.readAsset(assetSegments);
+    return this.readAsset(assetSegments)
   }
 }

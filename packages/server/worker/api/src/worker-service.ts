@@ -1,7 +1,7 @@
-import type { PrepareRequest } from "./models/prepare-request";
+import type { PrepareRequest } from './models/prepare-request'
 
 export interface WorkerService {
-  start(): void;
-  requestPrepare(request?: PrepareRequest): Promise<void>;
-  close?(): void;
+  start(): void
+  requestPrepare(request?: PrepareRequest): Promise<void>
+  close?(): void
 }

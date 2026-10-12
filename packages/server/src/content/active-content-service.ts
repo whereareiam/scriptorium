@@ -1,93 +1,97 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import type {
-  PublishedVersion,
-  ServedBundleManifest
-} from "@scriptorium/server-api";
-import { getDefaultLanguage, toRefSlug } from "@scriptorium/server-api";
-import type { RuntimeStatusService } from "../status-service";
+import { readFile } from 'node:fs/promises'
+import path from 'node:path'
+import type { PublishedVersion, ServedBundleManifest } from '@scriptorium/server-api'
+import { getDefaultLanguage, toRefSlug } from '@scriptorium/server-api'
+import type { RuntimeStatusService } from '../status-service'
 
 interface ActiveBundleCache {
-  generationId: string;
-  bundle: Promise<ServedBundleManifest>;
+  generationId: string
+  bundle: Promise<ServedBundleManifest>
 }
 
 export class ActiveContentService {
-  private cache: ActiveBundleCache | null = null;
+  private cache: ActiveBundleCache | null = null
 
   constructor(
     private readonly runtimeStatusService: RuntimeStatusService,
-    private readonly generationsDir: string
+    private readonly generationsDir: string,
   ) {}
 
   async getActiveBundle(): Promise<ActiveBundleCache> {
-    const snapshot = await this.runtimeStatusService.getSnapshot();
+    const snapshot = await this.runtimeStatusService.getSnapshot()
     if (!snapshot.activeGenerationId) {
-      throw new Error("Runtime content is not ready yet.");
+      throw new Error('Runtime content is not ready yet.')
     }
 
-    const cached = this.cache;
-    if (cached?.generationId === snapshot.activeGenerationId)
-      return cached;
+    const cached = this.cache
+    if (cached?.generationId === snapshot.activeGenerationId) return cached
 
-    const generationDir = path.join(this.generationsDir, snapshot.activeGenerationId);
-    const bundleDir = path.join(generationDir, "bundle");
+    const generationDir = path.join(this.generationsDir, snapshot.activeGenerationId)
+    const bundleDir = path.join(generationDir, 'bundle')
     const nextCache = {
       generationId: snapshot.activeGenerationId,
-      bundle: this.readServedBundleManifest(bundleDir)
-    } satisfies ActiveBundleCache;
-    this.cache = nextCache;
-    return nextCache;
+      bundle: this.readServedBundleManifest(bundleDir),
+    } satisfies ActiveBundleCache
+    this.cache = nextCache
+    return nextCache
   }
 
   async getProjectConfig() {
-    const active = await this.getActiveBundle();
-    return (await active.bundle).project;
+    const active = await this.getActiveBundle()
+    return (await active.bundle).project
   }
 
   async getPublishedVersions() {
-    const project = await this.getProjectConfig();
-    const defaultLanguage = getDefaultLanguage(project);
-    return (await this.getBundledVersions()).map((version) => toPublishedVersion(version, defaultLanguage));
+    const project = await this.getProjectConfig()
+    const defaultLanguage = getDefaultLanguage(project)
+    return (await this.getBundledVersions()).map((version) =>
+      toPublishedVersion(version, defaultLanguage),
+    )
   }
 
   async resolveRefName(refNameOrSlug?: string) {
-    const versions = await this.getBundledVersions();
+    const versions = await this.getBundledVersions()
     if (!refNameOrSlug) {
-      const project = await this.getProjectConfig();
-      return project.versions.home;
+      const project = await this.getProjectConfig()
+      return project.versions.home
     }
 
-    const exact = versions.find((version) => version.name === refNameOrSlug);
+    const exact = versions.find((version) => version.name === refNameOrSlug)
     if (exact) {
-      return exact.name;
+      return exact.name
     }
 
-    const bySlug = versions.find((version) => toRefSlug(version.name) === refNameOrSlug);
+    const bySlug = versions.find((version) => toRefSlug(version.name) === refNameOrSlug)
     if (!bySlug) {
-      throw new Error(`Unknown ref "${refNameOrSlug}".`);
+      throw new Error(`Unknown ref "${refNameOrSlug}".`)
     }
 
-    return bySlug.name;
+    return bySlug.name
   }
 
   private async getBundledVersions() {
-    const active = await this.getActiveBundle();
-    return (await active.bundle).versions;
+    const active = await this.getActiveBundle()
+    return (await active.bundle).versions
   }
 
   private async readServedBundleManifest(bundleDir: string) {
-    const manifestPath = path.join(bundleDir, "manifest.json");
-    const raw = await readFile(manifestPath, "utf8");
+    const manifestPath = path.join(bundleDir, 'manifest.json')
+    const raw = await readFile(manifestPath, 'utf8')
 
-    return JSON.parse(raw) as ServedBundleManifest;
+    return JSON.parse(raw) as ServedBundleManifest
   }
 }
 
-function toPublishedVersion(version: ServedBundleManifest["versions"][number], defaultLanguage: string): PublishedVersion {
+function toPublishedVersion(
+  version: ServedBundleManifest['versions'][number],
+  defaultLanguage: string,
+): PublishedVersion {
   return {
     name: version.name,
     kind: version.kind,
-    languages: [defaultLanguage, ...(version.translations ?? []).map((translation) => translation.language)]
-  };
+    languages: [
+      defaultLanguage,
+      ...(version.translations ?? []).map((translation) => translation.language),
+    ],
+  }
 }

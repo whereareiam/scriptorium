@@ -1,1 +1,1 @@
-export type { ReadinessResponse } from "../runtime-state";
+export type { ReadinessResponse } from '../runtime-state'

@@ -1,7 +1,7 @@
-import { handleReadinessRequest } from "@/scriptorium";
+import { handleReadinessRequest } from '@/scriptorium'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  return handleReadinessRequest();
+  return handleReadinessRequest()
 }

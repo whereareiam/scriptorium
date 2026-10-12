@@ -1,7 +1,2 @@
 export type RuntimePhase =
-  | "idle"
-  | "bundling"
-  | "preparing-content"
-  | "preparing-search"
-  | "ready"
-  | "error";
+  'idle' | 'bundling' | 'preparing-content' | 'preparing-search' | 'ready' | 'error'

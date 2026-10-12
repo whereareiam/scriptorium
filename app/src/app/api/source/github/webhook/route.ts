@@ -1,7 +1,7 @@
-import { handleSourceWebhook } from "@/scriptorium";
+import { handleSourceWebhook } from '@/scriptorium'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: Request) {
-  return handleSourceWebhook(request);
+  return handleSourceWebhook(request)
 }

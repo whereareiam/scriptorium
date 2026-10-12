@@ -1,1 +1,1 @@
-export type PublishedVersionKind = "branch" | "tag";
+export type PublishedVersionKind = 'branch' | 'tag'
