@@ -8,7 +8,7 @@ export class SearchIndexService {
     private readonly activeContentService: ActiveContentService
   ) {}
 
-  async getSearchIndex(refSlug?: string) {
+  async getSearchIndex(refSlug?: string, language?: string) {
     const snapshot = await this.runtimeStatusService.getSnapshot();
     if (!snapshot.activeGenerationId || !snapshot.preparedAt) {
       return null;
@@ -28,9 +28,14 @@ export class SearchIndexService {
       return undefined;
     }
 
+    const translation = language ? version.translations?.find((entry) => entry.language === language) : undefined;
+    if (language && !translation) {
+      return undefined;
+    }
+
     return {
-      body: await readFile(version.searchIndexPath, "utf8"),
-      etag: `"${snapshot.activeGenerationId}:${version.slug}"`,
+      body: await readFile(translation?.searchIndexPath ?? version.searchIndexPath, "utf8"),
+      etag: `"${snapshot.activeGenerationId}:${version.slug}${language ? `@${language}` : ""}"`,
       refSlug: version.slug
     };
   }

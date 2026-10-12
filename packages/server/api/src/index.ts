@@ -11,6 +11,8 @@ export { type OperationResponse, type OperationState, type OperationStateKind } 
 export { type PublishedVersion } from "./models/published/published-version";
 export { type PublishedVersionKind } from "./models/published/published-version-kind";
 export {
+  type ProjectI18n,
+  type ProjectLanguage,
   type ProjectLink,
   type PublishedVersionIncludeRule,
   type RefMetadata,
@@ -18,6 +20,7 @@ export {
   type ScriptoriumProjectConfig
 } from "./models/scriptorium-project-config";
 export { type ServedBundleManifest } from "./models/served/bundle/served-bundle-manifest";
+export { type ServedBundleTranslation } from "./models/served/bundle/served-bundle-translation";
 export { type ServedBundleVersion } from "./models/served/bundle/served-bundle-version";
 export {
   type ServedPageArtifact,
@@ -27,6 +30,10 @@ export {
   type ServedPageTocItem,
   type ServedPageTocNode
 } from "./models/served/page/served-page-artifact";
+export {
+  type ServedPageTranslation,
+  type ServedPageTranslationState
+} from "./models/served/page/served-page-translation";
 export { type ServedPageIndexEntry } from "./models/served/page/served-page-index-entry";
 export {
   type ServedPageTreeFolder,
@@ -38,3 +45,10 @@ export {
 export { type ServerContentReader } from "./server-content-reader";
 export { DEFAULT_BUNDLING_CAPTIONS, resolveBundlingCaptions } from "./bundling-captions";
 export { getRefMetadata, toRefSlug } from "./ref-utils";
+export {
+  getDefaultLanguage,
+  getLanguageLabel,
+  getTranslationLanguages,
+  toDocsBasePath
+} from "./i18n-utils";
+export { toSearchLanguage } from "./search-language";

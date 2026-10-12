@@ -2,6 +2,8 @@ import type { MarkdownRendererSerializedOptions } from "@fumadocs/local-md";
 import type { LocalMarkdownPage } from "@fumadocs/local-md";
 import type {
   ServedPageArtifact,
+  ServedPageTranslation,
+  ServedPageTranslationState,
   ServedPageIndexEntry,
   ServedPageTocItem,
   ServedPageTreeFolder,
@@ -24,7 +26,11 @@ export interface BuiltPageArtifactsResult {
 
 export async function buildPageArtifacts(
   source: SearchSource,
-  refSlug: string
+  refSlug: string,
+  translation?: {
+    language: string;
+    pageStates: Record<string, ServedPageTranslationState>;
+  }
 ): Promise<BuiltPageArtifactsResult> {
   const artifacts: BuiltPageArtifact[] = [];
 
@@ -46,7 +52,8 @@ export async function buildPageArtifacts(
         url: page.url,
         title,
         description,
-        renderer: toServedRenderer(renderer.serialize())
+        renderer: toServedRenderer(renderer.serialize()),
+        ...(translation ? { translation: toPageTranslation(translation, page.path, refSlug) } : {})
       },
       entry: {
         routeSegments,
@@ -62,6 +69,19 @@ export async function buildPageArtifacts(
   return {
     artifacts,
     tree: serializeRoot(resolveSidebarTree(source, refSlug))
+  };
+}
+
+function toPageTranslation(
+  translation: { language: string; pageStates: Record<string, ServedPageTranslationState> },
+  pagePath: string,
+  refSlug: string
+): ServedPageTranslation {
+  const contentPath = pagePath.startsWith(`${refSlug}/`) ? pagePath.slice(refSlug.length + 1) : pagePath;
+
+  return {
+    language: translation.language,
+    state: translation.pageStates[contentPath] ?? "untranslated"
   };
 }
 

@@ -55,16 +55,16 @@ export class ScriptoriumServer {
     return this.activeContentService.getPublishedVersions();
   }
 
-  async getPreparedPage(slugSegments: string[]) {
-    return this.pageArtifactService.getPage(slugSegments);
+  async getPreparedPage(slugSegments: string[], language?: string) {
+    return this.pageArtifactService.getPage(slugSegments, language);
   }
 
-  async getSidebarTree(refName: string) {
-    return this.pageArtifactService.getSidebarTree(refName);
+  async getSidebarTree(refName: string, language?: string) {
+    return this.pageArtifactService.getSidebarTree(refName, language);
   }
 
-  async resolvePreparedPageHref(refNameOrSlug: string, sourcePath: string, href: string) {
-    return this.pageArtifactService.resolveHref(refNameOrSlug, sourcePath, href);
+  async resolvePreparedPageHref(refNameOrSlug: string, sourcePath: string, href: string, language?: string) {
+    return this.pageArtifactService.resolveHref(refNameOrSlug, sourcePath, href, language);
   }
 
   async readCurrentAsset(assetSegments: string[]) {

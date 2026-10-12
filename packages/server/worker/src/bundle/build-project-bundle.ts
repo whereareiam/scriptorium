@@ -1,7 +1,12 @@
-import { access, cp, mkdir, realpath, rm, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, realpath, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import semver from "semver";
-import { toRefSlug, type ScriptoriumProjectConfig } from "@scriptorium/server-api";
+import {
+  getTranslationLanguages,
+  toRefSlug,
+  type ScriptoriumProjectConfig,
+  type ServedPageTranslationState
+} from "@scriptorium/server-api";
 import type { WorkerProject } from "@scriptorium/server-worker-api";
 import {
   getContractPrefixes,
@@ -10,6 +15,7 @@ import {
   type StageRepository
 } from "@scriptorium/source-api";
 import { resolveIncludeDirectives } from "../directives/include";
+import { buildTranslation, isPartialPath, resolvePageState } from "./translation/build-translation";
 
 export interface StagedBundle {
   generatedAt: string;
@@ -21,7 +27,15 @@ export interface StagedBundle {
     slug: string;
     kind: "branch" | "tag";
     contentDir: string;
+    translations: StagedTranslation[];
   }>;
+}
+
+export interface StagedTranslation {
+  language: string;
+  contentDir: string;
+  /** Translation state of every page, keyed by its path relative to the content root. */
+  pageStates: Record<string, ServedPageTranslationState>;
 }
 
 const bundleLocks = new Map<string, Promise<StagedBundle>>();
@@ -57,20 +71,21 @@ export async function buildProjectBundle(options: {
     await mkdir(path.join(outputDir, "versions"), { recursive: true });
     const currentAssetsDir = await copyCurrentAssets(projectRoot, outputDir);
 
+    const languages = getTranslationLanguages(project);
     const versions: StagedBundle["versions"] = [];
     if (availableRefs.length === 0) {
       for (const refName of resolvePreviewRefNames(workerProject)) {
-        versions.push(await exportWorkingTreeVersion(projectRoot, refName, outputDir));
+        versions.push(await exportWorkingTreeVersion(projectRoot, refName, outputDir, languages));
       }
     } else {
       const refs = filterPublishedRefs(availableRefs, workerProject);
       for (const ref of refs) {
         if (worktreeDirty && ref.kind === "branch" && ref.name === currentBranch) {
-          versions.push(await exportWorkingTreeVersion(projectRoot, ref.name, outputDir));
+          versions.push(await exportWorkingTreeVersion(projectRoot, ref.name, outputDir, languages));
           continue;
         }
 
-        const version = await exportVersion(projectRoot, repository, ref, outputDir, {
+        const version = await exportVersion(projectRoot, repository, ref, outputDir, languages, {
           required: ref.name === workerProject.homeRefName
         });
         if (version) {
@@ -115,9 +130,9 @@ async function copyCurrentAssets(projectRoot: string, outputDir: string) {
   return currentAssetsDir;
 }
 
-async function exportWorkingTreeVersion(projectRoot: string, versionName: string, outputDir: string) {
+async function exportWorkingTreeVersion(projectRoot: string, versionName: string, outputDir: string, languages: string[]) {
   const versionRoot = path.join(outputDir, "versions", versionName);
-  const { docsAssetsDir, docsContentDir } = resolveProjectPaths(projectRoot);
+  const { docsAssetsDir, docsContentDir, docsI18nDir } = resolveProjectPaths(projectRoot);
 
   await mkdir(versionRoot, { recursive: true });
   const bundledContentDir = path.join(versionRoot, "content");
@@ -129,13 +144,18 @@ async function exportWorkingTreeVersion(projectRoot: string, versionName: string
     await mkdir(path.join(versionRoot, "assets"), { recursive: true });
   }
 
-  await resolveIncludeDirectives(bundledContentDir);
+  if (await isDirectory(docsI18nDir)) {
+    await cp(docsI18nDir, path.join(versionRoot, "i18n"), { recursive: true });
+  }
+
+  const translations = await prepareVersionContent(versionRoot, bundledContentDir, languages);
 
   return {
     name: versionName,
     slug: toRefSlug(versionName),
     kind: "branch",
-    contentDir: path.join(versionRoot, "content")
+    contentDir: path.join(versionRoot, "content"),
+    translations
   } satisfies StagedBundle["versions"][number];
 }
 
@@ -144,6 +164,7 @@ async function exportVersion(
   repository: StageRepository,
   ref: SourceRef,
   outputDir: string,
+  languages: string[],
   options: { required: boolean }
 ) {
   const versionRoot = path.join(outputDir, "versions", ref.name);
@@ -169,6 +190,8 @@ async function exportVersion(
       destination = path.join(bundledContentDir, filePath.slice(prefixes.contentPrefix.length));
     } else if (filePath.startsWith(prefixes.assetsPrefix)) {
       destination = path.join(versionRoot, "assets", filePath.slice(prefixes.assetsPrefix.length));
+    } else if (filePath.startsWith(prefixes.i18nPrefix)) {
+      destination = path.join(versionRoot, "i18n", filePath.slice(prefixes.i18nPrefix.length));
     }
 
     await mkdir(path.dirname(destination), { recursive: true });
@@ -176,14 +199,70 @@ async function exportVersion(
     await writeFile(destination, content);
   }
 
-  await resolveIncludeDirectives(bundledContentDir);
+  const translations = await prepareVersionContent(versionRoot, bundledContentDir, languages);
 
   return {
     name: ref.name,
     slug: toRefSlug(ref.name),
     kind: ref.kind,
-    contentDir: bundledContentDir
+    contentDir: bundledContentDir,
+    translations
   } satisfies StagedBundle["versions"][number];
+}
+
+/**
+ * Builds each language the version has translations for, then expands includes everywhere.
+ * Translations are laid over the content before expansion, so a page picks up a translated
+ * partial where one exists and the default-language partial otherwise.
+ */
+async function prepareVersionContent(versionRoot: string, contentDir: string, languages: string[]) {
+  const builtTranslations = [];
+  for (const language of languages) {
+    const translationDir = path.join(versionRoot, "i18n", language);
+    if (!await isDirectory(translationDir)) {
+      continue;
+    }
+
+    builtTranslations.push(await buildTranslation({
+      language,
+      defaultContentDir: contentDir,
+      translationDir,
+      outputDir: path.join(versionRoot, "translations", language, "content")
+    }));
+  }
+
+  await resolveIncludeDirectives(contentDir);
+
+  const translations: StagedTranslation[] = [];
+  for (const translation of builtTranslations) {
+    const includedPartials = await resolveIncludeDirectives(translation.contentDir);
+    for (const orphan of translation.orphans) {
+      console.warn(`[scriptorium] docs/i18n/${translation.language}/${orphan} has no page in docs/content and is left out.`);
+    }
+
+    const pageStates: Record<string, ServedPageTranslationState> = {};
+    for (const pagePath of translation.states.keys()) {
+      if (!isPartialPath(pagePath)) {
+        pageStates[pagePath] = resolvePageState(translation, pagePath, includedPartials);
+      }
+    }
+
+    translations.push({
+      language: translation.language,
+      contentDir: translation.contentDir,
+      pageStates
+    });
+  }
+
+  return translations;
+}
+
+async function isDirectory(dirPath: string) {
+  try {
+    return (await stat(dirPath)).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 function resolveMissingContractParts(

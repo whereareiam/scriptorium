@@ -2,8 +2,15 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { create, insertMultiple, save } from "@orama/orama";
 import type { PrepareRequest } from "@scriptorium/server-worker-api";
-import type { ServedBundleManifest, ServedBundleVersion } from "@scriptorium/server-api";
-import type { StagedBundle } from "../../build-project-bundle";
+import {
+  getDefaultLanguage,
+  toDocsBasePath,
+  toSearchLanguage,
+  type ServedBundleManifest,
+  type ServedBundleTranslation,
+  type ServedBundleVersion
+} from "@scriptorium/server-api";
+import type { StagedBundle, StagedTranslation } from "../../build-project-bundle";
 import { buildAdvancedIndex } from "../../search/build/build-advanced-index";
 import { buildBreadcrumbs } from "../../search/build/build-breadcrumbs";
 import { buildSearchDocuments } from "../../search/build/build-search-documents";
@@ -32,23 +39,14 @@ export async function buildServedArtifacts(
     setPhase: (phase: "preparing-content" | "preparing-search") => void;
   }
 ): Promise<BuiltServedArtifacts> {
-  const searchDir = path.join(generationDir, "search");
-  const pageIndexesDir = path.join(generationDir, "page-indexes");
-  const pageTreesDir = path.join(generationDir, "page-trees");
-  const pageArtifactsRootDir = path.join(generationDir, "page-artifacts");
-  await Promise.all([
-    mkdir(searchDir, { recursive: true }),
-    mkdir(pageIndexesDir, { recursive: true }),
-    mkdir(pageTreesDir, { recursive: true }),
-    mkdir(pageArtifactsRootDir, { recursive: true })
-  ]);
-
   options.setPhase("preparing-content");
 
   const versions: ServedBundleVersion[] = [];
-  let artifactBytes = 0;
-  let pageCount = 0;
-  let searchDocumentCount = 0;
+  const totals: EditionTotals = {
+    artifactBytes: 0,
+    pageCount: 0,
+    searchDocumentCount: 0
+  };
 
   for (const [index, version] of bundle.versions.entries()) {
     const refStartedAt = Date.now();
@@ -59,72 +57,30 @@ export async function buildServedArtifacts(
       ref_name: version.name
     });
 
-    const source = await loadSearchSource(bundle, version.name);
-    const builtPages = await buildPageArtifacts(source, version.slug);
-    const pageArtifactsDir = path.join(pageArtifactsRootDir, version.slug);
-    const pageIndexPath = path.join(pageIndexesDir, `${version.slug}.json`);
-    const pageTreePath = path.join(pageTreesDir, `${version.slug}.json`);
-
-    for (const builtPage of builtPages.artifacts) {
-      artifactBytes += await writePageArtifact(
-        pageArtifactsDir,
-        builtPage.entry.artifactPath,
-        builtPage.artifact
+    const defaultEdition = await buildEdition(bundle, version, generationDir, totals, options);
+    const translations: ServedBundleTranslation[] = [];
+    for (const translation of version.translations) {
+      options.setPhase("preparing-content");
+      const edition = await buildEdition(
+        bundle,
+        version,
+        path.join(generationDir, "translations", translation.language),
+        totals,
+        options,
+        translation
       );
-    }
-
-    artifactBytes += await writePageIndex(
-      pageIndexPath,
-      builtPages.artifacts.map((entry) => entry.entry)
-    );
-    artifactBytes += await writePageTree(pageTreePath, builtPages.tree);
-    pageCount += builtPages.artifacts.length;
-
-    options.setPhase("preparing-search");
-    const searchDatabase = create({
-      schema: searchSchema
-    });
-
-    for (const page of source.getPages()) {
-      const builtPage = builtPages.artifacts.find((entry) => entry.artifact.url === page.url);
-      if (!builtPage) {
-        continue;
-      }
-
-      const index = await buildAdvancedIndex({
-        path: page.path,
-        url: page.url,
-        data: {
-          title: page.data.title,
-          description: page.data.description,
-          structuredData: builtPage.artifact.renderer.structuredData as any
-        }
+      translations.push({
+        language: translation.language,
+        ...edition
       });
-      const breadcrumbs = index.breadcrumbs ?? buildBreadcrumbs(source, page);
-      const documents = buildSearchDocuments({
-        ...index,
-        breadcrumbs
-      });
-      searchDocumentCount += documents.length;
-      await insertMultiple(searchDatabase, documents);
     }
-
-    const searchIndexPath = path.join(searchDir, `${version.slug}.json`);
-    const searchBody = JSON.stringify({
-      type: "advanced",
-      ...save(searchDatabase)
-    });
-    await writeFile(searchIndexPath, searchBody);
-    artifactBytes += Buffer.byteLength(searchBody);
 
     versions.push({
       name: version.name,
       slug: version.slug,
       kind: version.kind,
-      pageIndexPath,
-      pageTreePath,
-      pageArtifactsDir,
-      searchIndexPath
+      ...defaultEdition,
+      ...(translations.length > 0 ? { translations } : {})
     });
     options.logger?.emit("bundle_ref_finished", {
       run_id: path.basename(generationDir),
@@ -146,9 +102,112 @@ export async function buildServedArtifacts(
       currentAssetsDir: bundle.currentAssetsDir,
       versions
     },
-    artifact_bytes: artifactBytes,
-    page_count: pageCount,
+    artifact_bytes: totals.artifactBytes,
+    page_count: totals.pageCount,
     ref_count: versions.length,
-    search_document_count: searchDocumentCount
+    search_document_count: totals.searchDocumentCount
+  };
+}
+
+interface EditionTotals {
+  artifactBytes: number;
+  pageCount: number;
+  searchDocumentCount: number;
+}
+
+/**
+ * Prepares the pages, sidebar and search index of one edition of a version: the default
+ * language when `translation` is absent, otherwise that translated language.
+ */
+async function buildEdition(
+  bundle: StagedBundle,
+  version: StagedBundle["versions"][number],
+  rootDir: string,
+  totals: EditionTotals,
+  options: {
+    setPhase: (phase: "preparing-content" | "preparing-search") => void;
+  },
+  translation?: StagedTranslation
+) {
+  const searchDir = path.join(rootDir, "search");
+  const pageIndexesDir = path.join(rootDir, "page-indexes");
+  const pageTreesDir = path.join(rootDir, "page-trees");
+  const pageArtifactsRootDir = path.join(rootDir, "page-artifacts");
+  await Promise.all([
+    mkdir(searchDir, { recursive: true }),
+    mkdir(pageIndexesDir, { recursive: true }),
+    mkdir(pageTreesDir, { recursive: true }),
+    mkdir(pageArtifactsRootDir, { recursive: true })
+  ]);
+
+  const source = await loadSearchSource(bundle, version.name, translation
+    ? {
+        contentDir: translation.contentDir,
+        baseUrl: toDocsBasePath(bundle.project, translation.language)
+      }
+    : {});
+  const builtPages = await buildPageArtifacts(source, version.slug, translation);
+  const pageArtifactsDir = path.join(pageArtifactsRootDir, version.slug);
+  const pageIndexPath = path.join(pageIndexesDir, `${version.slug}.json`);
+  const pageTreePath = path.join(pageTreesDir, `${version.slug}.json`);
+
+  for (const builtPage of builtPages.artifacts) {
+    totals.artifactBytes += await writePageArtifact(
+      pageArtifactsDir,
+      builtPage.entry.artifactPath,
+      builtPage.artifact
+    );
+  }
+
+  totals.artifactBytes += await writePageIndex(
+    pageIndexPath,
+    builtPages.artifacts.map((entry) => entry.entry)
+  );
+  totals.artifactBytes += await writePageTree(pageTreePath, builtPages.tree);
+  totals.pageCount += builtPages.artifacts.length;
+
+  options.setPhase("preparing-search");
+  const searchDatabase = create({
+    schema: searchSchema,
+    language: toSearchLanguage(translation?.language ?? getDefaultLanguage(bundle.project))
+  });
+
+  for (const page of source.getPages()) {
+    const builtPage = builtPages.artifacts.find((entry) => entry.artifact.url === page.url);
+    if (!builtPage) {
+      continue;
+    }
+
+    const index = await buildAdvancedIndex({
+      path: page.path,
+      url: page.url,
+      data: {
+        title: page.data.title,
+        description: page.data.description,
+        structuredData: builtPage.artifact.renderer.structuredData as any
+      }
+    });
+    const breadcrumbs = index.breadcrumbs ?? buildBreadcrumbs(source, page);
+    const documents = buildSearchDocuments({
+      ...index,
+      breadcrumbs
+    });
+    totals.searchDocumentCount += documents.length;
+    await insertMultiple(searchDatabase, documents);
+  }
+
+  const searchIndexPath = path.join(searchDir, `${version.slug}.json`);
+  const searchBody = JSON.stringify({
+    type: "advanced",
+    ...save(searchDatabase)
+  });
+  await writeFile(searchIndexPath, searchBody);
+  totals.artifactBytes += Buffer.byteLength(searchBody);
+
+  return {
+    pageIndexPath,
+    pageTreePath,
+    pageArtifactsDir,
+    searchIndexPath
   };
 }

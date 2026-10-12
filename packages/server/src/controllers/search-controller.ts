@@ -16,15 +16,19 @@ export class SearchController {
       });
     }
 
-    const ref = new URL(request.url).searchParams.get("ref") ?? undefined;
-    const searchIndex = await this.searchIndexService.getSearchIndex(ref);
+    const searchParams = new URL(request.url).searchParams;
+    const ref = searchParams.get("ref") ?? undefined;
+    const language = searchParams.get("lang") ?? undefined;
+    const searchIndex = await this.searchIndexService.getSearchIndex(ref, language);
     if (searchIndex === undefined) {
       return Response.json({
         state: {
           kind: "failed",
           error: {
             code: "UNKNOWN_REF",
-            message: `Unknown ref "${ref ?? ""}".`
+            message: language
+              ? `Unknown ref "${ref ?? ""}" or language "${language}".`
+              : `Unknown ref "${ref ?? ""}".`
           }
         },
         phase: readiness.phase

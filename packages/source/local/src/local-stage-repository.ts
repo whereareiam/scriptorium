@@ -26,6 +26,7 @@ async function listWorkingTreeFiles(projectRoot: string, repoRoot: string) {
   const files = [
     ...await collectDirectoryFiles(path.join(projectRoot, "docs", "content"), prefixes.contentPrefix),
     ...await collectDirectoryFiles(path.join(projectRoot, "docs", "assets"), prefixes.assetsPrefix),
+    ...await collectDirectoryFiles(path.join(projectRoot, "docs", "i18n"), prefixes.i18nPrefix),
     ...await collectSingleFile(path.join(projectRoot, "scriptorium.project.json"), prefixes.configPath)
   ];
 

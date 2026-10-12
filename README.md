@@ -18,6 +18,7 @@ Consumer contract:
 
 - `docs/content/**`: bundled documentation files
 - `docs/assets/**`: project branding assets
+- `docs/i18n/<language>/**`: optional translations of `docs/content`
 - `scriptorium.project.json`: project metadata and published-version policy
 
 ## Consumer contract
@@ -35,6 +36,70 @@ Shared doc-only partials can live under `docs/content/_partials/**` and be reuse
 ```
 
 Those partials are expanded at compile time, so they stay out of navigation as standalone pages while remaining part of the page's compiled content for things like search and table-of-contents extraction.
+
+## Translations
+
+`docs/content` stays the only source of truth. A translation lives beside it, mirrors its paths, and only holds the pages that are translated:
+
+```text
+docs/
+  content/
+    meta.json
+    configuration/index.mdx
+    installation/_partials/startup-failure.mdx
+  i18n/
+    check.sh                                     copy of scripts/i18n-check.sh
+    ru/
+      meta.json                                  title and labels only
+      configuration/index.mdx
+      installation/_partials/startup-failure.mdx
+```
+
+List the languages in `scriptorium.project.json`. The default language is the one `docs/content` is written in:
+
+```json
+"i18n": {
+  "default": "en",
+  "languages": {
+    "en": { "label": "English" },
+    "ru": { "label": "Русский" }
+  }
+}
+```
+
+What readers get:
+
+- `/docs/<version>/...` stays the default language; a translation is served at `/ru/docs/<version>/...`.
+- The language menu in the sidebar switches to the same page and version. Readers whose browser prefers a published language are offered it once, in that language.
+- A page without a translation shows the original with a note, so a translation can grow page by page. A page whose original changed after it was translated shows the translation with a note and a link to the original.
+- Search, the sidebar and the interface texts follow the language. Scriptorium ships interface texts for English and Russian; other languages get the English ones.
+- A version without `docs/i18n/<language>/` is published in the default language only.
+
+How translations are built:
+
+- A translated `meta.json` doesn't decide which pages exist or their order; that stays with `docs/content`. It sets `title` and `description` and translates separator and link texts through `labels`, for example `{ "title": "Документация", "labels": { "Getting Started": "Начало работы" } }`.
+- Includes resolve the translated partial when there is one and the original otherwise. A partial that only holds code or configuration needs no translation.
+- A translation whose page no longer exists in `docs/content` is left out and logged.
+
+### Keeping translations current
+
+Each translated page records which version of its original it follows: `sourceHash` in its frontmatter is the git blob hash of the `docs/content` file it was translated from. When the original changes, the hash no longer matches, and the site and `check.sh` both report the translation as outdated.
+
+Copy [`scripts/i18n-check.sh`](scripts/i18n-check.sh) to `docs/i18n/check.sh` in the project. It needs only git and a POSIX shell:
+
+```bash
+docs/i18n/check.sh                                   # fails on outdated, unstamped or orphaned translations
+docs/i18n/check.sh stamp docs/i18n/ru/faq/index.mdx  # record the current original after translating
+docs/i18n/check.sh status                            # translated, outdated and untranslated pages per language
+docs/i18n/check.sh update                            # take the latest version of the script
+```
+
+For an outdated translation it prints the diff of the original since the translation was made, so only the changed part needs work.
+
+Run it where changes are made, so nobody has to remember it:
+
+- a git pre-commit hook running `docs/i18n/check.sh --staged`, which checks the translations the commit touches, as staged;
+- a CI step running `docs/i18n/check.sh`, which catches commits made without the hook. Git history is only needed for the diff (`fetch-depth: 0`), not for the check itself.
 
 The deployed Scriptorium app is configured with:
 
