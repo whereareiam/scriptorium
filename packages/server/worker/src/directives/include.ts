@@ -177,7 +177,15 @@ async function loadIncludedContent(
   if (content === undefined)
     fail(`Unable to read included partial "${path.relative(contentDir, partialPath)}".`);
 
-  return expandFileContent(contentDir, partialPath, content, nextChain, included);
+  return expandFileContent(contentDir, partialPath, stripFrontmatter(content), nextChain, included);
+}
+
+/**
+ * A partial is pasted into its page, so its own frontmatter (a translation's `sourceHash`)
+ * must not end up in the page body.
+ */
+function stripFrontmatter(content: string) {
+  return content.replace(/^---\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n)+/, "");
 }
 
 function resolvePartialPath(
