@@ -2,5 +2,5 @@ export {
   createScriptoriumServer,
   renderPreparedPageArtifact,
   ScriptoriumServer,
-  type ScriptoriumServerOptions
-} from "./scriptorium-server";
+  type ScriptoriumServerOptions,
+} from './scriptorium-server'

@@ -1,69 +1,81 @@
-import { readdir, readFile } from "node:fs/promises";
-import path from "node:path";
+import { readdir, readFile } from 'node:fs/promises'
+import path from 'node:path'
 import {
   filterBundledContractPaths,
   getContractPrefixes,
-  type StageRepository
-} from "@scriptorium/source-api";
+  type StageRepository,
+} from '@scriptorium/source-api'
 
 export function createLocalStageRepository(projectRoot: string): StageRepository {
   return {
     repoRoot: projectRoot,
     async listRefs() {
-      return [];
+      return []
     },
     async listFiles(_, localProjectRoot) {
-      return listWorkingTreeFiles(localProjectRoot, projectRoot);
+      return listWorkingTreeFiles(localProjectRoot, projectRoot)
     },
     async readFile(_, filePath) {
-      return readFile(path.join(projectRoot, filePath));
-    }
-  };
+      return readFile(path.join(projectRoot, filePath))
+    },
+  }
 }
 
 async function listWorkingTreeFiles(projectRoot: string, repoRoot: string) {
-  const prefixes = getContractPrefixes(projectRoot, repoRoot);
+  const prefixes = getContractPrefixes(projectRoot, repoRoot)
   const files = [
-    ...await collectDirectoryFiles(path.join(projectRoot, "docs", "content"), prefixes.contentPrefix),
-    ...await collectDirectoryFiles(path.join(projectRoot, "docs", "assets"), prefixes.assetsPrefix),
-    ...await collectDirectoryFiles(path.join(projectRoot, "docs", "i18n"), prefixes.i18nPrefix),
-    ...await collectSingleFile(path.join(projectRoot, "scriptorium.project.json"), prefixes.configPath)
-  ];
+    ...(await collectDirectoryFiles(
+      path.join(projectRoot, 'docs', 'content'),
+      prefixes.contentPrefix,
+    )),
+    ...(await collectDirectoryFiles(
+      path.join(projectRoot, 'docs', 'assets'),
+      prefixes.assetsPrefix,
+    )),
+    ...(await collectDirectoryFiles(path.join(projectRoot, 'docs', 'i18n'), prefixes.i18nPrefix)),
+    ...(await collectSingleFile(
+      path.join(projectRoot, 'scriptorium.project.json'),
+      prefixes.configPath,
+    )),
+  ]
 
-  return filterBundledContractPaths(files, projectRoot, repoRoot);
+  return filterBundledContractPaths(files, projectRoot, repoRoot)
 }
 
-async function collectDirectoryFiles(dirPath: string, repoRelativePrefix: string): Promise<string[]> {
+async function collectDirectoryFiles(
+  dirPath: string,
+  repoRelativePrefix: string,
+): Promise<string[]> {
   try {
-    const entries = await readdir(dirPath, { withFileTypes: true });
-    const files: string[] = [];
+    const entries = await readdir(dirPath, { withFileTypes: true })
+    const files: string[] = []
 
     for (const entry of entries) {
-      const entryPath = path.join(dirPath, entry.name);
-      const repoRelativePath = path.posix.join(repoRelativePrefix, entry.name);
+      const entryPath = path.join(dirPath, entry.name)
+      const repoRelativePath = path.posix.join(repoRelativePrefix, entry.name)
 
       if (entry.isDirectory()) {
-        files.push(...await collectDirectoryFiles(entryPath, repoRelativePath));
+        files.push(...(await collectDirectoryFiles(entryPath, repoRelativePath)))
       } else if (entry.isFile()) {
-        files.push(normalizeJoinedPath(repoRelativePath));
+        files.push(normalizeJoinedPath(repoRelativePath))
       }
     }
 
-    return files;
+    return files
   } catch {
-    return [];
+    return []
   }
 }
 
 async function collectSingleFile(filePath: string, repoRelativePath: string) {
   try {
-    await readFile(filePath);
-    return [normalizeJoinedPath(repoRelativePath)];
+    await readFile(filePath)
+    return [normalizeJoinedPath(repoRelativePath)]
   } catch {
-    return [];
+    return []
   }
 }
 
 function normalizeJoinedPath(filePath: string) {
-  return filePath.replaceAll("\\", "/").replace(/\/\.\//g, "/");
+  return filePath.replaceAll('\\', '/').replace(/\/\.\//g, '/')
 }

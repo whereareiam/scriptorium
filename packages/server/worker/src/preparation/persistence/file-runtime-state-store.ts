@@ -1,50 +1,51 @@
-import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import path from "node:path";
-import type { RuntimeReadinessStatus } from "../model/runtime-readiness-status";
-import type { PersistedRuntimeState } from "./persisted-runtime-state";
+import { randomUUID } from 'node:crypto'
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import path from 'node:path'
+import type { RuntimeReadinessStatus } from '../model/runtime-readiness-status'
+import type { PersistedRuntimeState } from './persisted-runtime-state'
 
 export class FileRuntimeStateStore {
-  private queuedWrite: Promise<void> = Promise.resolve();
+  private queuedWrite: Promise<void> = Promise.resolve()
 
   constructor(
     private readonly stateFile: string,
-    private readonly instanceId: string
-  ) {
-  }
+    private readonly instanceId: string,
+  ) {}
 
   read(): Promise<PersistedRuntimeState | null> {
-    return readRuntimeState(this.stateFile);
+    return readRuntimeState(this.stateFile)
   }
 
   queueWrite(status: RuntimeReadinessStatus): Promise<void> {
     this.queuedWrite = this.queuedWrite
       .catch(() => undefined)
-      .then(() => writeRuntimeState(this.stateFile, toPersistedRuntimeState(status, this.instanceId)));
+      .then(() =>
+        writeRuntimeState(this.stateFile, toPersistedRuntimeState(status, this.instanceId)),
+      )
 
-    return this.queuedWrite;
+    return this.queuedWrite
   }
 }
 
 async function readRuntimeState(stateFile: string) {
   try {
-    const raw = await readFile(stateFile, "utf8");
-    return JSON.parse(raw) as PersistedRuntimeState;
+    const raw = await readFile(stateFile, 'utf8')
+    return JSON.parse(raw) as PersistedRuntimeState
   } catch {
-    return null;
+    return null
   }
 }
 
 async function writeRuntimeState(stateFile: string, state: PersistedRuntimeState) {
-  const tmpPath = `${stateFile}.${randomUUID().slice(0, 8)}.tmp`;
-  await mkdir(path.dirname(stateFile), { recursive: true });
-  await writeFile(tmpPath, JSON.stringify(state, null, 2));
-  await rename(tmpPath, stateFile);
+  const tmpPath = `${stateFile}.${randomUUID().slice(0, 8)}.tmp`
+  await mkdir(path.dirname(stateFile), { recursive: true })
+  await writeFile(tmpPath, JSON.stringify(state, null, 2))
+  await rename(tmpPath, stateFile)
 }
 
 function toPersistedRuntimeState(
   status: RuntimeReadinessStatus,
-  instanceId: string
+  instanceId: string,
 ): PersistedRuntimeState {
   return {
     instanceId,
@@ -53,6 +54,6 @@ function toPersistedRuntimeState(
     finishedAt: status.finishedAt,
     activeGenerationId: status.activeGenerationId,
     lastSuccessfulPreparedAt: status.lastSuccessfulPreparedAt,
-    error: status.error
-  };
+    error: status.error,
+  }
 }

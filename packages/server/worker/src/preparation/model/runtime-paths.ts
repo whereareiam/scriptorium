@@ -1,4 +1,4 @@
 export interface RuntimePaths {
-  generationsDir: string;
-  stateFile: string;
+  generationsDir: string
+  stateFile: string
 }

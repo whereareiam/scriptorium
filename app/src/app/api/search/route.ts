@@ -1,7 +1,7 @@
-import { handleSearchRequest } from "@/scriptorium";
+import { handleSearchRequest } from '@/scriptorium'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
-  return handleSearchRequest(request);
+  return handleSearchRequest(request)
 }

@@ -1,7 +1,4 @@
 {
   "title": "Tabs",
-  "pages": [
-    "default",
-    "content-tabs"
-  ]
+  "pages": ["default", "content-tabs"]
 }

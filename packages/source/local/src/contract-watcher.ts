@@ -1,82 +1,81 @@
-import { watch, type FSWatcher } from "node:fs";
-import { readdir } from "node:fs/promises";
-import path from "node:path";
-import { isBundledContractPath, normalizeRepoRelativePath } from "@scriptorium/source-api";
+import { watch, type FSWatcher } from 'node:fs'
+import { readdir } from 'node:fs/promises'
+import path from 'node:path'
+import { isBundledContractPath, normalizeRepoRelativePath } from '@scriptorium/source-api'
 
 export function createLocalContractWatcher(options: {
-  projectRoot: string;
-  onChange: () => void;
-  debounceMs?: number;
-  watchFactory?: typeof watch;
+  projectRoot: string
+  onChange: () => void
+  debounceMs?: number
+  watchFactory?: typeof watch
 }) {
-  const debounceMs = options.debounceMs ?? 150;
-  const watchFactory = options.watchFactory ?? watch;
-  const watchers = new Map<string, FSWatcher>();
-  let closed = false;
-  let debounceHandle: ReturnType<typeof setTimeout> | undefined;
-  let refreshScheduled = false;
+  const debounceMs = options.debounceMs ?? 150
+  const watchFactory = options.watchFactory ?? watch
+  const watchers = new Map<string, FSWatcher>()
+  let closed = false
+  let debounceHandle: ReturnType<typeof setTimeout> | undefined
+  let refreshScheduled = false
 
-  void refreshWatchers();
+  void refreshWatchers()
 
   return {
     close() {
-      closed = true;
-      if (debounceHandle) clearTimeout(debounceHandle);
+      closed = true
+      if (debounceHandle) clearTimeout(debounceHandle)
       for (const watcher of watchers.values()) {
-        watcher.close();
+        watcher.close()
       }
-      watchers.clear();
-    }
-  };
+      watchers.clear()
+    },
+  }
 
   function scheduleChange() {
-    if (closed)
-      return;
+    if (closed) return
 
-    if (debounceHandle) clearTimeout(debounceHandle);
+    if (debounceHandle) clearTimeout(debounceHandle)
     debounceHandle = setTimeout(() => {
-      debounceHandle = undefined;
-      options.onChange();
-    }, debounceMs);
+      debounceHandle = undefined
+      options.onChange()
+    }, debounceMs)
   }
 
   function scheduleRefresh() {
-    if (refreshScheduled || closed)
-      return;
+    if (refreshScheduled || closed) return
 
-    refreshScheduled = true;
+    refreshScheduled = true
     queueMicrotask(async () => {
-      refreshScheduled = false;
-      await refreshWatchers();
-    });
+      refreshScheduled = false
+      await refreshWatchers()
+    })
   }
 
   async function refreshWatchers() {
-    const nextDirectories = new Set<string>(await collectWatchDirectories(options.projectRoot));
+    const nextDirectories = new Set<string>(await collectWatchDirectories(options.projectRoot))
 
     for (const watchedDir of watchers.keys()) {
-      if (nextDirectories.has(watchedDir))
-        continue;
+      if (nextDirectories.has(watchedDir)) continue
 
-      watchers.get(watchedDir)?.close();
-      watchers.delete(watchedDir);
+      watchers.get(watchedDir)?.close()
+      watchers.delete(watchedDir)
     }
 
     for (const dir of nextDirectories) {
-      if (watchers.has(dir))
-        continue;
+      if (watchers.has(dir)) continue
 
       try {
         const watcher = watchFactory(dir, { persistent: false }, (_, fileName) => {
-          if (fileName && !matchesContractPath(options.projectRoot, path.join(dir, fileName.toString()))) {
-            scheduleRefresh();
-            return;
+          if (
+            fileName &&
+            !matchesContractPath(options.projectRoot, path.join(dir, fileName.toString()))
+          ) {
+            scheduleRefresh()
+            return
           }
 
-          scheduleRefresh();
-          scheduleChange();
-        });
-        watchers.set(dir, watcher);
+          scheduleRefresh()
+          scheduleChange()
+        })
+        watchers.set(dir, watcher)
       } catch {
         // Ignore directories that disappear between scanning and watch registration.
       }
@@ -87,28 +86,27 @@ export function createLocalContractWatcher(options: {
 async function collectWatchDirectories(projectRoot: string) {
   const directories = new Set<string>([
     projectRoot,
-    path.join(projectRoot, "docs"),
-    path.join(projectRoot, "docs", "content"),
-    path.join(projectRoot, "docs", "assets"),
-    path.join(projectRoot, "docs", "i18n")
-  ]);
+    path.join(projectRoot, 'docs'),
+    path.join(projectRoot, 'docs', 'content'),
+    path.join(projectRoot, 'docs', 'assets'),
+    path.join(projectRoot, 'docs', 'i18n'),
+  ])
 
-  await collectNestedDirectories(path.join(projectRoot, "docs", "content"), directories);
-  await collectNestedDirectories(path.join(projectRoot, "docs", "assets"), directories);
-  await collectNestedDirectories(path.join(projectRoot, "docs", "i18n"), directories);
-  return Array.from(directories);
+  await collectNestedDirectories(path.join(projectRoot, 'docs', 'content'), directories)
+  await collectNestedDirectories(path.join(projectRoot, 'docs', 'assets'), directories)
+  await collectNestedDirectories(path.join(projectRoot, 'docs', 'i18n'), directories)
+  return Array.from(directories)
 }
 
 async function collectNestedDirectories(rootDir: string, directories: Set<string>) {
   try {
-    const entries = await readdir(rootDir, { withFileTypes: true });
+    const entries = await readdir(rootDir, { withFileTypes: true })
     for (const entry of entries) {
-      if (!entry.isDirectory())
-        continue;
+      if (!entry.isDirectory()) continue
 
-      const dirPath = path.join(rootDir, entry.name);
-      directories.add(dirPath);
-      await collectNestedDirectories(dirPath, directories);
+      const dirPath = path.join(rootDir, entry.name)
+      directories.add(dirPath)
+      await collectNestedDirectories(dirPath, directories)
     }
   } catch {
     // Ignore missing directories.
@@ -116,6 +114,6 @@ async function collectNestedDirectories(rootDir: string, directories: Set<string
 }
 
 function matchesContractPath(projectRoot: string, absolutePath: string) {
-  const relativePath = normalizeRepoRelativePath(path.relative(projectRoot, absolutePath));
-  return isBundledContractPath(relativePath, projectRoot, projectRoot);
+  const relativePath = normalizeRepoRelativePath(path.relative(projectRoot, absolutePath))
+  return isBundledContractPath(relativePath, projectRoot, projectRoot)
 }

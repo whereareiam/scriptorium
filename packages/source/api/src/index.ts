@@ -3,12 +3,12 @@ export {
   getContractPrefixes,
   isBundledContractPath,
   normalizeRepoRelativePath,
-  resolveProjectPaths
-} from "./contract-paths";
+  resolveProjectPaths,
+} from './contract-paths'
 export {
   type SourceAdapter,
   type SourceAdapterCallbacks,
   type SourceRef,
   type SourceRefKind,
-  type StageRepository
-} from "./source-adapter";
+  type StageRepository,
+} from './source-adapter'

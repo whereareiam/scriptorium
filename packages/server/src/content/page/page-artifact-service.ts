@@ -1,190 +1,196 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
+import { readFile } from 'node:fs/promises'
+import path from 'node:path'
 import type {
   ServedBundleManifest,
   ServedBundleVersion,
   ServedPageArtifact,
   ServedPageIndexEntry,
-  ServedPageTreeRoot
-} from "@scriptorium/server-api";
-import { toRefSlug } from "@scriptorium/server-api";
-import type { ActiveContentService } from "../active-content-service";
+  ServedPageTreeRoot,
+} from '@scriptorium/server-api'
+import { toRefSlug } from '@scriptorium/server-api'
+import type { ActiveContentService } from '../active-content-service'
 
 interface CachedJsonValue<T> {
-  generationId: string;
-  versionName: string;
-  value: Promise<T>;
+  generationId: string
+  versionName: string
+  value: Promise<T>
 }
 
 interface StoredPageIndex {
-  entries: ServedPageIndexEntry[];
+  entries: ServedPageIndexEntry[]
 }
 
 export class PageArtifactService {
-  private readonly pageTrees = new Map<string, CachedJsonValue<ServedPageTreeRoot>>();
-  private readonly pageIndexes = new Map<string, CachedJsonValue<StoredPageIndex>>();
-  private readonly pageArtifacts = new Map<string, Promise<ServedPageArtifact>>();
-  private readonly pageArtifactsLru: string[] = [];
+  private readonly pageTrees = new Map<string, CachedJsonValue<ServedPageTreeRoot>>()
+  private readonly pageIndexes = new Map<string, CachedJsonValue<StoredPageIndex>>()
+  private readonly pageArtifacts = new Map<string, Promise<ServedPageArtifact>>()
+  private readonly pageArtifactsLru: string[] = []
 
   constructor(private readonly activeContentService: ActiveContentService) {}
 
   async getSidebarTree(refNameOrSlug: string, language?: string) {
-    const { generationId, bundle } = await this.getActiveBundleAndManifest();
-    const refName = await this.activeContentService.resolveRefName(refNameOrSlug);
-    const edition = resolveEdition(resolveVersion(bundle, refName), language);
-    const cacheKey = `${generationId}:${edition.key}:tree`;
-    const cached = this.pageTrees.get(cacheKey);
+    const { generationId, bundle } = await this.getActiveBundleAndManifest()
+    const refName = await this.activeContentService.resolveRefName(refNameOrSlug)
+    const edition = resolveEdition(resolveVersion(bundle, refName), language)
+    const cacheKey = `${generationId}:${edition.key}:tree`
+    const cached = this.pageTrees.get(cacheKey)
     if (cached) {
-      return cached.value;
+      return cached.value
     }
 
-    const value = this.readJson<ServedPageTreeRoot>(edition.pageTreePath);
+    const value = this.readJson<ServedPageTreeRoot>(edition.pageTreePath)
     this.pageTrees.set(cacheKey, {
       generationId,
       versionName: edition.key,
-      value
-    });
-    this.evictGenerationCaches(generationId);
-    return value;
+      value,
+    })
+    this.evictGenerationCaches(generationId)
+    return value
   }
 
   async getPage(routeSegments: string[], language?: string) {
     if (routeSegments.length === 0) {
-      return null;
+      return null
     }
 
-    const { generationId, bundle } = await this.getActiveBundleAndManifest();
-    const refName = await this.activeContentService.resolveRefName(routeSegments[0]);
-    const edition = resolveEdition(resolveVersion(bundle, refName), language);
-    const index = await this.getPageIndex(edition);
-    const routeKey = toRouteKey(routeSegments.slice(1));
-    const entry = index.entries.find((candidate) => toRouteKey(candidate.routeSegments.slice(1)) === routeKey);
+    const { generationId, bundle } = await this.getActiveBundleAndManifest()
+    const refName = await this.activeContentService.resolveRefName(routeSegments[0])
+    const edition = resolveEdition(resolveVersion(bundle, refName), language)
+    const index = await this.getPageIndex(edition)
+    const routeKey = toRouteKey(routeSegments.slice(1))
+    const entry = index.entries.find(
+      (candidate) => toRouteKey(candidate.routeSegments.slice(1)) === routeKey,
+    )
     if (!entry) {
-      return null;
+      return null
     }
 
-    const cacheKey = `${generationId}:${edition.key}:${routeKey}`;
-    const cachedArtifact = this.pageArtifacts.get(cacheKey);
+    const cacheKey = `${generationId}:${edition.key}:${routeKey}`
+    const cachedArtifact = this.pageArtifacts.get(cacheKey)
     if (cachedArtifact) {
-      this.bumpArtifact(cacheKey);
-      return cachedArtifact;
+      this.bumpArtifact(cacheKey)
+      return cachedArtifact
     }
 
-    const artifactPath = path.join(edition.pageArtifactsDir, entry.artifactPath);
-    const artifact = this.readJson<ServedPageArtifact>(artifactPath);
-    this.pageArtifacts.set(cacheKey, artifact);
-    this.bumpArtifact(cacheKey);
-    this.evictArtifacts();
-    return artifact;
+    const artifactPath = path.join(edition.pageArtifactsDir, entry.artifactPath)
+    const artifact = this.readJson<ServedPageArtifact>(artifactPath)
+    this.pageArtifacts.set(cacheKey, artifact)
+    this.bumpArtifact(cacheKey)
+    this.evictArtifacts()
+    return artifact
   }
 
   async resolveHref(refNameOrSlug: string, sourcePath: string, href: string, language?: string) {
-    if (!href.startsWith("./") && !href.startsWith("../")) {
-      return href;
+    if (!href.startsWith('./') && !href.startsWith('../')) {
+      return href
     }
 
-    const { bundle } = await this.getActiveBundleAndManifest();
-    const refName = await this.activeContentService.resolveRefName(refNameOrSlug);
-    const edition = resolveEdition(resolveVersion(bundle, refName), language);
-    const index = await this.getPageIndex(edition);
-    const [value, hash] = href.split("#", 2);
-    const resolvedSourcePath = path.posix.normalize(path.posix.join(path.posix.dirname(sourcePath), value));
-    const target = index.entries.find((entry) => entry.sourcePath === resolvedSourcePath);
+    const { bundle } = await this.getActiveBundleAndManifest()
+    const refName = await this.activeContentService.resolveRefName(refNameOrSlug)
+    const edition = resolveEdition(resolveVersion(bundle, refName), language)
+    const index = await this.getPageIndex(edition)
+    const [value, hash] = href.split('#', 2)
+    const resolvedSourcePath = path.posix.normalize(
+      path.posix.join(path.posix.dirname(sourcePath), value),
+    )
+    const target = index.entries.find((entry) => entry.sourcePath === resolvedSourcePath)
     if (!target) {
-      return href;
+      return href
     }
 
-    return hash ? `${target.url}#${hash}` : target.url;
+    return hash ? `${target.url}#${hash}` : target.url
   }
 
   private async getPageIndex(edition: ServedEdition) {
-    const active = await this.activeContentService.getActiveBundle();
-    const cacheKey = `${active.generationId}:${edition.key}:index`;
-    const cached = this.pageIndexes.get(cacheKey);
+    const active = await this.activeContentService.getActiveBundle()
+    const cacheKey = `${active.generationId}:${edition.key}:index`
+    const cached = this.pageIndexes.get(cacheKey)
     if (cached) {
-      return cached.value;
+      return cached.value
     }
 
-    const value = this.readJson<StoredPageIndex>(edition.pageIndexPath);
+    const value = this.readJson<StoredPageIndex>(edition.pageIndexPath)
     this.pageIndexes.set(cacheKey, {
       generationId: active.generationId,
       versionName: edition.key,
-      value
-    });
-    this.evictGenerationCaches(active.generationId);
-    return value;
+      value,
+    })
+    this.evictGenerationCaches(active.generationId)
+    return value
   }
 
   private async getActiveBundleAndManifest() {
-    const active = await this.activeContentService.getActiveBundle();
+    const active = await this.activeContentService.getActiveBundle()
     return {
       generationId: active.generationId,
-      bundle: await active.bundle
-    };
+      bundle: await active.bundle,
+    }
   }
 
   private async readJson<T>(filePath: string) {
-    const raw = await readFile(filePath, "utf8");
-    return JSON.parse(raw) as T;
+    const raw = await readFile(filePath, 'utf8')
+    return JSON.parse(raw) as T
   }
 
   private evictGenerationCaches(activeGenerationId: string) {
     for (const [key, cache] of this.pageTrees.entries()) {
       if (cache.generationId !== activeGenerationId) {
-        this.pageTrees.delete(key);
+        this.pageTrees.delete(key)
       }
     }
 
     for (const [key, cache] of this.pageIndexes.entries()) {
       if (cache.generationId !== activeGenerationId) {
-        this.pageIndexes.delete(key);
+        this.pageIndexes.delete(key)
       }
     }
 
     for (const key of this.pageArtifacts.keys()) {
       if (!key.startsWith(`${activeGenerationId}:`)) {
-        this.pageArtifacts.delete(key);
-        const index = this.pageArtifactsLru.indexOf(key);
+        this.pageArtifacts.delete(key)
+        const index = this.pageArtifactsLru.indexOf(key)
         if (index >= 0) {
-          this.pageArtifactsLru.splice(index, 1);
+          this.pageArtifactsLru.splice(index, 1)
         }
       }
     }
   }
 
   private bumpArtifact(cacheKey: string) {
-    const index = this.pageArtifactsLru.indexOf(cacheKey);
+    const index = this.pageArtifactsLru.indexOf(cacheKey)
     if (index >= 0) {
-      this.pageArtifactsLru.splice(index, 1);
+      this.pageArtifactsLru.splice(index, 1)
     }
 
-    this.pageArtifactsLru.push(cacheKey);
+    this.pageArtifactsLru.push(cacheKey)
   }
 
   private evictArtifacts() {
     while (this.pageArtifactsLru.length > 32) {
-      const removed = this.pageArtifactsLru.shift();
+      const removed = this.pageArtifactsLru.shift()
       if (removed) {
-        this.pageArtifacts.delete(removed);
+        this.pageArtifacts.delete(removed)
       }
     }
   }
 }
 
 function resolveVersion(bundle: ServedBundleManifest, refName: string) {
-  const version = bundle.versions.find((entry) => entry.name === refName || toRefSlug(entry.name) === refName);
+  const version = bundle.versions.find(
+    (entry) => entry.name === refName || toRefSlug(entry.name) === refName,
+  )
   if (!version) {
-    throw new Error(`Unknown bundled ref "${refName}".`);
+    throw new Error(`Unknown bundled ref "${refName}".`)
   }
 
-  return version;
+  return version
 }
 
 interface ServedEdition {
-  key: string;
-  pageIndexPath: string;
-  pageTreePath: string;
-  pageArtifactsDir: string;
+  key: string
+  pageIndexPath: string
+  pageTreePath: string
+  pageArtifactsDir: string
 }
 
 /** The prepared files of a version in one language; the default language without `language`. */
@@ -192,21 +198,21 @@ function resolveEdition(version: ServedBundleVersion, language?: string): Served
   if (!language) {
     return {
       key: version.name,
-      ...version
-    };
+      ...version,
+    }
   }
 
-  const translation = version.translations?.find((entry) => entry.language === language);
+  const translation = version.translations?.find((entry) => entry.language === language)
   if (!translation) {
-    throw new Error(`Version "${version.name}" has no "${language}" translation.`);
+    throw new Error(`Version "${version.name}" has no "${language}" translation.`)
   }
 
   return {
     key: `${version.name}@${language}`,
-    ...translation
-  };
+    ...translation,
+  }
 }
 
 function toRouteKey(routeSegments: string[]) {
-  return routeSegments.join("/");
+  return routeSegments.join('/')
 }

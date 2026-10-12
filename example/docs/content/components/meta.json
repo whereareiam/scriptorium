@@ -1,6 +1,4 @@
 {
   "title": "Components",
-  "pages": [
-    "tabs"
-  ]
+  "pages": ["tabs"]
 }

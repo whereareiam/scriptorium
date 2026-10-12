@@ -1,1 +1,1 @@
-export { buildSearchArtifacts } from "./build/build-search-artifacts";
+export { buildSearchArtifacts } from './build/build-search-artifacts'
