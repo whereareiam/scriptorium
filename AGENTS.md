@@ -32,6 +32,7 @@ the server only see their APIs.
 
 - `bun install` once, then `bun run dev` serves `example/`. Point `app/scriptorium.json` at a project
   folder (`"source": { "type": "local", "target": "/path/to/project" }`) to serve that project.
+- `bun run format` formats the code with Prettier; pull requests fail `bun run format:check` otherwise.
 - `bun test` runs the tests; they sit next to the file they test as `<file>.test.ts`.
 - `bun run typecheck` checks the app and every package it imports.
 - `bun run build` builds the deployable app, and `bun run verify:production` checks it.
@@ -39,7 +40,7 @@ the server only see their APIs.
 ## Pull requests and releases
 
 Build each change in its own `feature/...` branch and merge it into `dev` through a pull request.
-Pull requests run the typecheck, the tests, the build and the production checks. Publishing a release
+Pull requests run the formatting check, the typecheck, the tests, the build and the production checks. Publishing a release
 draft tags `dev` and runs the same checks on the tag; deployments build Scriptorium from the tag.
 
 ### Release notes
@@ -53,12 +54,12 @@ category of its label. Readers run Scriptorium or publish a project with it.
   `Container`. Add an area only for a new part of Scriptorium, and add it to this list in the same pull
   request.
 
-| Label | Use for |
-| --- | --- |
-| `feature` | something new for deployments or projects |
-| `change` | changed behavior, configuration or docs contract |
-| `bug` | a fix for a bug that shipped in a release |
-| `dependencies` | a library update |
+| Label            | Use for                                                                             |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| `feature`        | something new for deployments or projects                                           |
+| `change`         | changed behavior, configuration or docs contract                                    |
+| `bug`            | a fix for a bug that shipped in a release                                           |
+| `dependencies`   | a library update                                                                    |
 | `skip-changelog` | refactors, build, CI, tests and documentation, and fixes of bugs that never shipped |
 
 Add `major` next to the category when deployments or projects must change their configuration or

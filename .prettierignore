@@ -1,0 +1,12 @@
+node_modules
+.next
+.scriptorium
+build
+coverage
+dist
+bun.lock
+.claude
+# Shared with the other whereareiam repositories, kept identical to their copies.
+.github
+# Docs content belongs to the docs contract; Prettier's MDX support can change how it renders.
+*.mdx
