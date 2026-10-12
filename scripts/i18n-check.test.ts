@@ -87,6 +87,25 @@ describe('i18n-check.sh', () => {
     expect(result.stdout).not.toContain('faq.mdx')
   })
 
+  test('passes in staged mode when the last translation is not part of the commit', async () => {
+    const root = await createProject()
+    await write(root, 'docs/content/zz.mdx', 'Last.\n')
+    await write(root, 'docs/i18n/ru/setup.mdx', 'Установите.\n')
+    await write(root, 'docs/i18n/ru/zz.mdx', 'Последняя.\n')
+    run(root, 'stamp', 'docs/i18n/ru/setup.mdx', 'docs/i18n/ru/zz.mdx')
+    git(root, 'add', '-A')
+    git(root, 'commit', '-qm', 'docs')
+
+    await write(root, 'docs/content/setup.mdx', '---\ntitle: Setup\n---\n\nChanged.\n')
+    await write(root, 'docs/i18n/ru/setup.mdx', 'Изменено.\n')
+    run(root, 'stamp', 'docs/i18n/ru/setup.mdx')
+    git(root, 'add', '-A')
+
+    const result = run(root, '--staged')
+    expect(result.stdout).toBe('')
+    expect(result.status).toBe(0)
+  })
+
   test('counts pages per language', async () => {
     const root = await createProject()
     await write(root, 'docs/content/faq.mdx', 'FAQ\n')
