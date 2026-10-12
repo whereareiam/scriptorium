@@ -26,19 +26,28 @@ export function buildSearchDocuments(page: AdvancedIndex): SearchDocument[] {
     });
   }
 
-  const structuredItems = Array.isArray(page.structuredData)
-    ? page.structuredData
-    : [page.structuredData];
-
-  for (const item of structuredItems) {
+  const { headings, contents } = page.structuredData;
+  for (const heading of headings) {
     documents.push({
       id: `${page.id}::${documents.length}`,
       page_id: page.id,
-      type: item.type,
-      content: item.content,
-      breadcrumbs: item.breadcrumbs,
+      type: "heading",
+      content: heading.content,
+      breadcrumbs: page.breadcrumbs,
       tags,
-      url: item.id ?? page.url
+      url: `${page.url}#${heading.id}`
+    });
+  }
+
+  for (const content of contents) {
+    documents.push({
+      id: `${page.id}::${documents.length}`,
+      page_id: page.id,
+      type: "text",
+      content: content.content,
+      breadcrumbs: page.breadcrumbs,
+      tags,
+      url: content.heading ? `${page.url}#${content.heading}` : page.url
     });
   }
 
