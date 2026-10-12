@@ -18,6 +18,7 @@ import {
   getPublishedVersions,
   getRuntimeReadiness,
   getSidebarTree,
+  hasPreparedPage,
 } from '@/scriptorium'
 import {
   createConfiguredIcon,
@@ -60,6 +61,21 @@ export async function DocsLayoutView({
   const logoUrl = resolveProjectAssetUrl(project.logo)
   const links = (project.links ?? []).map(toLayoutLink)
   const versionLanguages = currentVersion?.languages ?? [defaultLanguage]
+  const pageSegments = slug?.slice(1) ?? []
+  const tabs = await Promise.all(
+    versions
+      .filter((version: PublishedVersion) => !language || version.languages.includes(language))
+      .map(async (version: PublishedVersion) => {
+        const versionUrl = `${docsBasePath}/${toRefSlug(version.name)}`
+        // Switching versions keeps the reader on the same page when that version has it.
+        const samePage =
+          pageSegments.length > 0 && (await hasPreparedPage(version.name, pageSegments, language))
+        return {
+          title: resolveRefLabel(project, version.name),
+          url: samePage ? `${versionUrl}/${pageSegments.join('/')}` : versionUrl,
+        }
+      }),
+  )
 
   return (
     <LanguageProvider
@@ -82,12 +98,7 @@ export async function DocsLayoutView({
         tree={tree}
         links={links}
         themeSwitch={{ mode: 'light-dark-system' }}
-        tabs={versions
-          .filter((version: PublishedVersion) => !language || version.languages.includes(language))
-          .map((version: PublishedVersion) => ({
-            title: resolveRefLabel(project, version.name),
-            url: `${docsBasePath}/${toRefSlug(version.name)}`,
-          }))}
+        tabs={tabs}
         nav={{
           title: (
             <span className="inline-flex items-center gap-2.5">
