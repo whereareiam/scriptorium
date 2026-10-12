@@ -5,14 +5,15 @@ Scriptorium is the deployable docs runtime for per-project Fumadocs sites with m
 It contains:
 
 - `app/`: the Scriptorium Next.js app
-- `packages/core/`: shared contracts, project config, and version metadata helpers
-- `packages/runtime/source-git/`: git-backed runtime source implementation
-- `packages/bundle/`: normalized bundle generation from a source
-- `packages/runtime/`: runtime config, generation lifecycle, and readiness helpers
-- `packages/runtime/worker/`: background preparation worker orchestration
-- `packages/content/`: bundled content access, docs-source helpers, and theme helpers
+- `packages/server/`: request-time access to the active bundle, pages, search and readiness
+- `packages/server/api/`: shared models for project configuration, bundles and pages
+- `packages/server/worker/`: background preparation that bundles every published version
+- `packages/source/`: the git and local content sources and the docs contract paths
+- `packages/trigger/`: what starts a preparation, such as GitHub webhooks
 - `packages/ui/`: Scriptorium-specific React/UI helpers
 - `example/`: a minimal consumer-shaped fixture used for local development
+
+See [AGENTS.md](AGENTS.md) for how the packages fit together and how changes are released.
 
 Consumer contract:
 

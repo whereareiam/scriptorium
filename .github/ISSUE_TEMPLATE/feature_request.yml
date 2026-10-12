@@ -1,0 +1,41 @@
+name: Suggestion
+description: Suggest a new feature or a change to existing behavior.
+labels:
+  - suggestion
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What you are trying to do and what stops you today.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How Scriptorium could solve it, for readers and for projects.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Workarounds or other solutions you considered.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Pages
+        - Search
+        - Versions
+        - Translations
+        - Sources
+        - Webhooks
+        - Cache
+        - Runtime
+        - Other
