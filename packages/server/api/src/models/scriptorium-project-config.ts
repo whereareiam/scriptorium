@@ -63,6 +63,17 @@ export type ProjectLink =
       active?: "url" | "nested-url" | "none";
     };
 
+export interface ProjectLanguage {
+  label: string;
+}
+
+export interface ProjectI18n {
+  /** Language of `docs/content`, the source every translation follows. */
+  default: string;
+  /** Every published language, the default included, keyed by its code. */
+  languages: Record<string, ProjectLanguage>;
+}
+
 export interface ScriptoriumProjectConfig {
   name: string;
   description?: string;
@@ -75,6 +86,7 @@ export interface ScriptoriumProjectConfig {
   };
   urls?: Record<string, string>;
   links?: ProjectLink[];
+  i18n?: ProjectI18n;
   versions: {
     home: string;
     include: PublishedVersionIncludeRule[];

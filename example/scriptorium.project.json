@@ -5,10 +5,24 @@
   "urls": {
     "github": "https://github.com/example/project"
   },
+  "i18n": {
+    "default": "en",
+    "languages": {
+      "en": {
+        "label": "English"
+      },
+      "ru": {
+        "label": "Русский"
+      }
+    }
+  },
   "versions": {
     "home": "dev",
     "include": [
-      { "type": "tag", "pattern": "*" }
+      {
+        "type": "tag",
+        "pattern": "*"
+      }
     ],
     "meta": {
       "dev": {

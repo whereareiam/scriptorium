@@ -1,4 +1,5 @@
 import type { PublishedVersionKind } from "../../published/published-version-kind";
+import type { ServedBundleTranslation } from "./served-bundle-translation";
 
 export interface ServedBundleVersion {
   name: string;
@@ -8,4 +9,5 @@ export interface ServedBundleVersion {
   pageTreePath: string;
   pageArtifactsDir: string;
   searchIndexPath: string;
+  translations?: ServedBundleTranslation[];
 }

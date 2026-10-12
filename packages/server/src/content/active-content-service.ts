@@ -4,7 +4,7 @@ import type {
   PublishedVersion,
   ServedBundleManifest
 } from "@scriptorium/server-api";
-import { toRefSlug } from "@scriptorium/server-api";
+import { getDefaultLanguage, toRefSlug } from "@scriptorium/server-api";
 import type { RuntimeStatusService } from "../status-service";
 
 interface ActiveBundleCache {
@@ -46,7 +46,9 @@ export class ActiveContentService {
   }
 
   async getPublishedVersions() {
-    return (await this.getBundledVersions()).map(toPublishedVersion);
+    const project = await this.getProjectConfig();
+    const defaultLanguage = getDefaultLanguage(project);
+    return (await this.getBundledVersions()).map((version) => toPublishedVersion(version, defaultLanguage));
   }
 
   async resolveRefName(refNameOrSlug?: string) {
@@ -82,9 +84,10 @@ export class ActiveContentService {
   }
 }
 
-function toPublishedVersion(version: ServedBundleManifest["versions"][number]): PublishedVersion {
+function toPublishedVersion(version: ServedBundleManifest["versions"][number], defaultLanguage: string): PublishedVersion {
   return {
     name: version.name,
-    kind: version.kind
+    kind: version.kind,
+    languages: [defaultLanguage, ...(version.translations ?? []).map((translation) => translation.language)]
   };
 }

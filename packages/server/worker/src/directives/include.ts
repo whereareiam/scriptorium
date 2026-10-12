@@ -29,20 +29,36 @@ type MdAttribute = {
 
 type Fail = (reason: string, place?: unknown) => never;
 
+/**
+ * Expands every include in place and removes the partial directories.
+ *
+ * @returns for each page that includes partials, the partials it ended up containing,
+ * directly or through another partial, as paths relative to `contentDir`
+ */
 export async function resolveIncludeDirectives(contentDir: string) {
   const partialDirectories: string[] = [];
   const files = await collectContentFiles(contentDir, partialDirectories);
+  const includedPartials = new Map<string, string[]>();
 
   for (const filePath of files) {
     const content = await readFile(filePath, "utf8");
-    const expandedContent = await expandFileContent(contentDir, filePath, content, []);
+    const included = new Set<string>();
+    const expandedContent = await expandFileContent(contentDir, filePath, content, [], included);
     if (expandedContent !== content)
       await writeFile(filePath, expandedContent);
+    if (included.size > 0)
+      includedPartials.set(toContentPath(contentDir, filePath), Array.from(included, (entry) => toContentPath(contentDir, entry)));
   }
 
   for (const partialDirectory of partialDirectories) {
     await rm(partialDirectory, { recursive: true, force: true });
   }
+
+  return includedPartials;
+}
+
+function toContentPath(contentDir: string, filePath: string) {
+  return path.relative(contentDir, filePath).split(path.sep).join("/");
 }
 
 async function collectContentFiles(rootDir: string, partialDirectories: string[]): Promise<string[]> {
@@ -74,7 +90,8 @@ async function expandFileContent(
   contentDir: string,
   currentFile: string,
   content: string,
-  chain: string[]
+  chain: string[],
+  included: Set<string>
 ) {
   const fail = createFail(contentDir, currentFile);
   const tree = remark().use(remarkMdx).parse(content) as MdNode;
@@ -84,7 +101,7 @@ async function expandFileContent(
     content: string;
   }> = [];
 
-  await collectIncludeReplacements(contentDir, tree, currentFile, chain, fail, replacements);
+  await collectIncludeReplacements(contentDir, tree, currentFile, chain, included, fail, replacements);
   return applyReplacements(content, replacements);
 }
 
@@ -102,6 +119,7 @@ async function collectIncludeReplacements(
   node: MdNode,
   currentFile: string,
   chain: string[],
+  included: Set<string>,
   fail: Fail,
   replacements: Array<{
     start: number;
@@ -119,7 +137,8 @@ async function collectIncludeReplacements(
         fail(`<${INCLUDE_ELEMENT_NAME} /> requires a string "src" attribute.`, child.position);
 
       const partialPath = resolvePartialPath(contentDir, currentFile, src, child, fail);
-      const replacement = await loadIncludedContent(contentDir, partialPath, currentFile, chain, fail);
+      included.add(partialPath);
+      const replacement = await loadIncludedContent(contentDir, partialPath, currentFile, chain, included, fail);
       replacements.push({
         ...getNodeRange(child, fail),
         content: replacement
@@ -127,7 +146,7 @@ async function collectIncludeReplacements(
       continue;
     }
 
-    await collectIncludeReplacements(contentDir, child, currentFile, chain, fail, replacements);
+    await collectIncludeReplacements(contentDir, child, currentFile, chain, included, fail, replacements);
   }
 }
 
@@ -136,6 +155,7 @@ async function loadIncludedContent(
   partialPath: string,
   currentFile: string,
   chain: string[],
+  included: Set<string>,
   fail: Fail
 ) {
   const nextChain = [...chain, currentFile];
@@ -157,7 +177,7 @@ async function loadIncludedContent(
   if (content === undefined)
     fail(`Unable to read included partial "${path.relative(contentDir, partialPath)}".`);
 
-  return expandFileContent(contentDir, partialPath, content, nextChain);
+  return expandFileContent(contentDir, partialPath, content, nextChain, included);
 }
 
 function resolvePartialPath(

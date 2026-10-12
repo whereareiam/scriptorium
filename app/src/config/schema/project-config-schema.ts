@@ -77,6 +77,18 @@ const projectLinksSchema = z.array(
   ])
 ).optional();
 
+const languageCodeSchema = z.string().regex(/^[a-z]{2,3}(-[A-Za-z0-9]+)?$/, "Use a language code such as \"en\" or \"pt-BR\".");
+
+const projectI18nSchema = z.object({
+  default: languageCodeSchema,
+  languages: z.record(languageCodeSchema, z.object({
+    label: z.string().trim().min(1)
+  }))
+}).refine((i18n) => i18n.default in i18n.languages, {
+  message: "i18n.languages must contain the default language.",
+  path: ["languages"]
+}).optional();
+
 export const projectConfigSchema: z.ZodType<ScriptoriumProjectConfig> = z.object({
   name: z.string().min(1),
   description: z.string().min(1).optional(),
@@ -89,5 +101,6 @@ export const projectConfigSchema: z.ZodType<ScriptoriumProjectConfig> = z.object
   }).optional(),
   urls: z.record(z.string(), z.string().min(1)).optional(),
   links: projectLinksSchema,
+  i18n: projectI18nSchema,
   versions: publishedVersionsSchema
 });

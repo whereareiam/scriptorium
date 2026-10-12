@@ -14,14 +14,22 @@ type CombinedVirtualFile = VirtualFile<{
 
 export type SearchSource = Awaited<ReturnType<typeof loadSearchSource>>;
 
-export async function loadSearchSource(bundle: StagedBundle, refName: string) {
+/**
+ * Loads one edition of a version: its default-language content under `/docs`, or a
+ * translation's content under that language's docs root.
+ */
+export async function loadSearchSource(
+  bundle: StagedBundle,
+  refName: string,
+  edition: { contentDir?: string; baseUrl?: string } = {}
+) {
   const version = bundle.versions.find((entry) => entry.name === refName);
   if (!version) {
     throw new Error(`Unknown bundled ref "${refName}".`);
   }
 
   const docs = localMd({
-    dir: version.contentDir,
+    dir: edition.contentDir ?? version.contentDir,
     include: ["**/*.{md,mdx,json}"],
     mdxOptions: {
       remarkPlugins: [remarkSteps]
@@ -32,7 +40,7 @@ export async function loadSearchSource(bundle: StagedBundle, refName: string) {
   const files = prefixRefFiles(staticSource.files, version.slug, refLabel);
 
   return loader({ files }, {
-    baseUrl: "/docs",
+    baseUrl: edition.baseUrl ?? "/docs",
     plugins: [
       lucideIconsPlugin(),
       disableLeafFolderCollapsingPlugin()

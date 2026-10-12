@@ -1,3 +1,5 @@
+import { readPathLanguage } from "../language/language-header";
+
 export const EDGE_CACHE_SECONDS = 30;
 
 const variantHeaders = [
@@ -12,9 +14,15 @@ export function isEdgeCacheCandidate(request: Request): boolean {
   if (variantHeaders.some(header => request.headers.has(header))) return false;
   const url = new URL(request.url);
   if (url.pathname === "/api/search")
-    return [...url.searchParams.keys()].every(key => key === "ref") && url.searchParams.getAll("ref").length <= 1;
+    return [...url.searchParams.keys()].every(key => key === "ref" || key === "lang")
+      && url.searchParams.getAll("ref").length <= 1
+      && url.searchParams.getAll("lang").length <= 1;
   if (url.search !== "") return false;
-  return url.pathname === "/" || url.pathname === "/docs" || url.pathname.startsWith("/docs/") || url.pathname.startsWith("/assets/");
+  return url.pathname === "/"
+    || url.pathname === "/docs"
+    || url.pathname.startsWith("/docs/")
+    || readPathLanguage(url.pathname) !== undefined
+    || url.pathname.startsWith("/assets/");
 }
 
 export function edgeCacheControl(request: Request, hasContent: boolean): string {

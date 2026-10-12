@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { headers } from "next/headers";
 import { RootProvider } from "fumadocs-ui/provider/next";
-import { hasUsableContent } from "@scriptorium/server-api";
+import { getDefaultLanguage, hasUsableContent, type ScriptoriumProjectConfig } from "@scriptorium/server-api";
+import { getInterfaceText } from "@scriptorium/ui";
 import {
   buildWorkspaceThemeStylesheet,
   getBundlingCaptions,
@@ -13,6 +15,7 @@ import { SearchDialog } from "./_layout/search-dialog";
 import { resolveProjectAssetUrl, resolveProjectFaviconUrl } from "./_layout/project-assets";
 import { RuntimeWarmupScreen } from "./_layout/warmup/runtime-warmup-screen";
 import { WorkspaceBody } from "./_layout/workspace-body";
+import { LANGUAGE_HEADER } from "@/language/language-header";
 import "./global.css";
 
 export const dynamic = "force-dynamic";
@@ -61,12 +64,16 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const captions = await getBundlingCaptions();
   const workspaceThemeCss = buildWorkspaceThemeStylesheet(project);
   const contentToken = readiness.state.content?.token;
+  const language = resolveRequestLanguage(project, (await headers()).get(LANGUAGE_HEADER));
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={language} suppressHydrationWarning>
       <WorkspaceBody>
         {workspaceThemeCss ? <style>{workspaceThemeCss}</style> : null}
-        <RootProvider search={{ SearchDialog }}>
+        <RootProvider
+          search={{ SearchDialog }}
+          i18n={{ locale: language, translations: getInterfaceText(language).fumadocs }}
+        >
           <RuntimeReadinessGuard contentToken={contentToken} captions={captions}>
             {children}
           </RuntimeReadinessGuard>
@@ -74,4 +81,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       </WorkspaceBody>
     </html>
   );
+}
+
+/** The language of the requested page: a published translation's prefix, or the default language. */
+function resolveRequestLanguage(project: ScriptoriumProjectConfig, pathLanguage: string | null) {
+  if (pathLanguage && project.i18n?.languages[pathLanguage]) {
+    return pathLanguage;
+  }
+
+  return getDefaultLanguage(project);
 }

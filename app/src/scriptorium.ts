@@ -59,16 +59,16 @@ export async function getPublishedVersions() {
   return getRuntimeServices().server.getPublishedVersions();
 }
 
-export async function getPreparedPage(slugSegments: string[]) {
-  return getRuntimeServices().server.getPreparedPage(slugSegments);
+export async function getPreparedPage(slugSegments: string[], language?: string) {
+  return getRuntimeServices().server.getPreparedPage(slugSegments, language);
 }
 
-export async function getSidebarTree(refName: string) {
-  return getRuntimeServices().server.getSidebarTree(refName);
+export async function getSidebarTree(refName: string, language?: string) {
+  return getRuntimeServices().server.getSidebarTree(refName, language);
 }
 
-export async function resolvePreparedPageHref(refNameOrSlug: string, sourcePath: string, href: string) {
-  return getRuntimeServices().server.resolvePreparedPageHref(refNameOrSlug, sourcePath, href);
+export async function resolvePreparedPageHref(refNameOrSlug: string, sourcePath: string, href: string, language?: string) {
+  return getRuntimeServices().server.resolvePreparedPageHref(refNameOrSlug, sourcePath, href, language);
 }
 
 export async function getPreparedSearchIndex(refSlug: string) {

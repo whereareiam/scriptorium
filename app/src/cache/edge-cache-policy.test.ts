@@ -4,7 +4,7 @@ import { edgeCacheControl, isEdgeCacheCandidate } from "./edge-cache-policy";
 const request = (path = "/docs/dev", headers: Record<string, string> = {}) => new Request(`https://docs.example${path}`, { headers });
 
 test("anonymous HTML, assets, and versioned search use a short edge TTL only after content exists", () => {
-  for (const path of ["/", "/docs", "/docs/dev", "/assets/logo.svg", "/api/search", "/api/search?ref=dev"]) {
+  for (const path of ["/", "/docs", "/docs/dev", "/assets/logo.svg", "/api/search", "/api/search?ref=dev", "/ru/docs", "/ru/docs/dev", "/api/search?ref=dev&lang=ru"]) {
     expect(edgeCacheControl(request(path), true)).toBe("public, max-age=30");
     expect(edgeCacheControl(request(path), false)).toBe("no-store");
   }
@@ -16,7 +16,7 @@ test("RSC variants, credentials, and personalized requests cannot reuse cached H
 });
 
 test("webhooks, health, arbitrary queries, and writes bypass shared caches", () => {
-  for (const path of ["/api/source/github/webhook", "/api/health", "/api/health/ready", "/docs/dev?_rsc=abc", "/docs/dev?tracking=x", "/api/search?ref=dev&ref=other", "/api/search?unknown=x"])
+  for (const path of ["/api/source/github/webhook", "/api/health", "/api/health/ready", "/docs/dev?_rsc=abc", "/docs/dev?tracking=x", "/api/search?ref=dev&ref=other", "/api/search?ref=dev&lang=ru&lang=de", "/api/search?unknown=x", "/ru/other"])
     expect(isEdgeCacheCandidate(request(path))).toBe(false);
   expect(isEdgeCacheCandidate(new Request("https://docs.example/docs/dev", { method: "POST" }))).toBe(false);
 });

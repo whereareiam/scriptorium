@@ -1,3 +1,5 @@
+import type { ServedPageTranslation } from "./served-page-translation";
+
 export interface ServedPageTocNode {
   type: string;
   value?: string;
@@ -37,4 +39,5 @@ export interface ServedPageArtifact {
   title: string;
   description?: string;
   renderer: ServedPageRenderer;
+  translation?: ServedPageTranslation;
 }

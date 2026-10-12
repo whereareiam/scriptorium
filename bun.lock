@@ -23,6 +23,7 @@
     "app": {
       "name": "@scriptorium/web",
       "dependencies": {
+        "@orama/orama": "^3.1.12",
         "@scriptorium/server": "workspace:*",
         "@scriptorium/server-api": "workspace:*",
         "@scriptorium/server-worker": "workspace:*",
@@ -55,8 +56,6 @@
         "@scriptorium/server-api": "workspace:*",
         "fumadocs-core": "^16.8.5",
         "react": "^19.2.5",
-        "remark": "^15.0.1",
-        "remark-mdx": "^3.1.1",
       },
     },
     "packages/server/api": {
@@ -105,6 +104,7 @@
     "packages/ui": {
       "name": "@scriptorium/ui",
       "dependencies": {
+        "@scriptorium/server-api": "workspace:*",
         "fumadocs-ui": "^16.8.5",
         "lucide-react": "^1.12.0",
         "mdx": "^0.3.1",
