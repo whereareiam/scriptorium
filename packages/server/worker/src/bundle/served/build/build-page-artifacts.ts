@@ -1,5 +1,5 @@
-import type { MarkdownRendererSerializedOptions } from "@fumadocs/local-md";
-import type { LocalMarkdownPage } from "@fumadocs/local-md";
+import type { MarkdownRendererSerializedOptions } from '@fumadocs/local-md'
+import type { LocalMarkdownPage } from '@fumadocs/local-md'
 import type {
   ServedPageArtifact,
   ServedPageTranslation,
@@ -10,40 +10,44 @@ import type {
   ServedPageTreeNode,
   ServedPageTreePage,
   ServedPageTreeRoot,
-  ServedPageTreeSeparator
-} from "@scriptorium/server-api";
-import type { SearchSource } from "../../search/load-search-source";
+  ServedPageTreeSeparator,
+} from '@scriptorium/server-api'
+import type { SearchSource } from '../../search/load-search-source'
 
 export interface BuiltPageArtifact {
-  artifact: ServedPageArtifact;
-  entry: ServedPageIndexEntry;
+  artifact: ServedPageArtifact
+  entry: ServedPageIndexEntry
 }
 
 export interface BuiltPageArtifactsResult {
-  artifacts: BuiltPageArtifact[];
-  tree: ServedPageTreeRoot;
+  artifacts: BuiltPageArtifact[]
+  tree: ServedPageTreeRoot
 }
 
 export async function buildPageArtifacts(
   source: SearchSource,
   refSlug: string,
   translation?: {
-    language: string;
-    pageStates: Record<string, ServedPageTranslationState>;
-  }
+    language: string
+    pageStates: Record<string, ServedPageTranslationState>
+  },
 ): Promise<BuiltPageArtifactsResult> {
-  const artifacts: BuiltPageArtifact[] = [];
+  const artifacts: BuiltPageArtifact[] = []
 
   for (const page of source.getPages()) {
-    const renderer = await (page.data as LocalMarkdownPage<Record<string, unknown>, Record<string, unknown>>).load();
-    const routeSegments = page.slugs as string[];
-    const title = typeof page.data.title === "string" ? page.data.title : String(page.data.title ?? "");
-    const description = typeof page.data.description === "string"
-      ? page.data.description
-      : page.data.description == null
-        ? undefined
-        : String(page.data.description);
-    const artifactPath = toArtifactPath(routeSegments.slice(1));
+    const renderer = await (
+      page.data as LocalMarkdownPage<Record<string, unknown>, Record<string, unknown>>
+    ).load()
+    const routeSegments = page.slugs as string[]
+    const title =
+      typeof page.data.title === 'string' ? page.data.title : String(page.data.title ?? '')
+    const description =
+      typeof page.data.description === 'string'
+        ? page.data.description
+        : page.data.description == null
+          ? undefined
+          : String(page.data.description)
+    const artifactPath = toArtifactPath(routeSegments.slice(1))
 
     artifacts.push({
       artifact: {
@@ -53,7 +57,7 @@ export async function buildPageArtifacts(
         title,
         description,
         renderer: toServedRenderer(renderer.serialize()),
-        ...(translation ? { translation: toPageTranslation(translation, page.path, refSlug) } : {})
+        ...(translation ? { translation: toPageTranslation(translation, page.path, refSlug) } : {}),
       },
       entry: {
         routeSegments,
@@ -61,133 +65,137 @@ export async function buildPageArtifacts(
         url: page.url,
         title,
         description,
-        artifactPath
-      }
-    });
+        artifactPath,
+      },
+    })
   }
 
   return {
     artifacts,
-    tree: serializeRoot(resolveSidebarTree(source, refSlug))
-  };
+    tree: serializeRoot(resolveSidebarTree(source, refSlug)),
+  }
 }
 
 function toPageTranslation(
   translation: { language: string; pageStates: Record<string, ServedPageTranslationState> },
   pagePath: string,
-  refSlug: string
+  refSlug: string,
 ): ServedPageTranslation {
-  const contentPath = pagePath.startsWith(`${refSlug}/`) ? pagePath.slice(refSlug.length + 1) : pagePath;
+  const contentPath = pagePath.startsWith(`${refSlug}/`)
+    ? pagePath.slice(refSlug.length + 1)
+    : pagePath
 
   return {
     language: translation.language,
-    state: translation.pageStates[contentPath] ?? "untranslated"
-  };
+    state: translation.pageStates[contentPath] ?? 'untranslated',
+  }
 }
 
 export function toArtifactPath(routeSegments: string[]) {
   if (routeSegments.length === 0) {
-    return "index.json";
+    return 'index.json'
   }
 
-  return `${routeSegments.join("/")}/index.json`;
+  return `${routeSegments.join('/')}/index.json`
 }
 
-function toServedRenderer(renderer: MarkdownRendererSerializedOptions): ServedPageArtifact["renderer"] {
-  if (renderer.type === "js") {
+function toServedRenderer(
+  renderer: MarkdownRendererSerializedOptions,
+): ServedPageArtifact['renderer'] {
+  if (renderer.type === 'js') {
     return {
-      kind: "js",
+      kind: 'js',
       code: renderer.code,
       filePath: renderer.filePath,
       baseUrl: renderer.baseUrl,
-      structuredData: renderer.structuredData
-    };
+      structuredData: renderer.structuredData,
+    }
   }
 
   return {
-    kind: "ast",
+    kind: 'ast',
     tree: renderer.tree,
     filePath: renderer.filePath,
     rehypeToc: renderer.rehypeToc as ServedPageTocItem[] | undefined,
-    structuredData: renderer.structuredData
-  };
+    structuredData: renderer.structuredData,
+  }
 }
 
 function resolveSidebarTree(source: SearchSource, refSlug: string) {
-  const tree = source.getPageTree() as any;
-  const folder = tree.children.find((node: any) => node.type === "folder" && node.$ref === `${refSlug}/meta.json`) as any;
+  const tree = source.getPageTree() as any
+  const folder = tree.children.find(
+    (node: any) => node.type === 'folder' && node.$ref === `${refSlug}/meta.json`,
+  ) as any
   if (!folder) {
-    return tree;
+    return tree
   }
 
   return {
     ...tree,
     name: folder.name,
-    children: folder.children ?? []
-  };
+    children: folder.children ?? [],
+  }
 }
 
 function serializeRoot(node: any): ServedPageTreeRoot {
   return {
-    type: "root",
+    type: 'root',
     name: toText(node.name),
     description: toOptionalText(node.description),
-    children: (node.children ?? []).map(serializeNode)
-  };
+    children: (node.children ?? []).map(serializeNode),
+  }
 }
 
 function serializeNode(node: any): ServedPageTreeNode {
   switch (node.type) {
-    case "page":
-      return serializePage(node);
-    case "separator":
-      return serializeSeparator(node);
-    case "folder":
-      return serializeFolder(node);
+    case 'page':
+      return serializePage(node)
+    case 'separator':
+      return serializeSeparator(node)
+    case 'folder':
+      return serializeFolder(node)
     default:
-      return serializeSeparator({});
+      return serializeSeparator({})
   }
 }
 
 function serializePage(node: any): ServedPageTreePage {
   return {
-    type: "page",
+    type: 'page',
     name: toText(node.name),
     url: node.url,
     external: node.external,
-    description: toOptionalText(node.description)
-  };
+    description: toOptionalText(node.description),
+  }
 }
 
 function serializeSeparator(node: any): ServedPageTreeSeparator {
   return {
-    type: "separator",
-    name: toOptionalText(node.name)
-  };
+    type: 'separator',
+    name: toOptionalText(node.name),
+  }
 }
 
 function serializeFolder(node: any): ServedPageTreeFolder {
   return {
-    type: "folder",
+    type: 'folder',
     name: toText(node.name),
     description: toOptionalText(node.description),
     root: node.root,
     defaultOpen: node.defaultOpen,
     collapsible: node.collapsible,
     index: node.index ? serializePage(node.index) : undefined,
-    children: (node.children ?? []).map(serializeNode)
-  };
+    children: (node.children ?? []).map(serializeNode),
+  }
 }
 
 function toText(value: unknown) {
-  if (typeof value === "string")
-    return value;
-  if (typeof value === "number" || typeof value === "boolean")
-    return String(value);
-  return "";
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  return ''
 }
 
 function toOptionalText(value: unknown) {
-  const text = toText(value);
-  return text === "" ? undefined : text;
+  const text = toText(value)
+  return text === '' ? undefined : text
 }
