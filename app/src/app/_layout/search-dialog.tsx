@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { usePathname } from 'next/navigation'
 import {
   SearchDialog as PrimitiveSearchDialog,
@@ -13,35 +14,20 @@ import {
   type SharedProps,
 } from 'fumadocs-ui/components/dialog/search'
 import { useDocsSearch } from 'fumadocs-core/search/client'
-import { create } from '@orama/orama'
-import { toSearchLanguage } from '@scriptorium/server-api'
-import { useI18n } from 'fumadocs-ui/contexts/i18n'
+import { staticClient } from 'fumadocs-core/search/client/orama-static'
 import { parseDocsPathname } from '@scriptorium/ui'
 
 export function SearchDialog(props: SharedProps) {
   const pathname = usePathname()
-  const { locale } = useI18n()
   const docsPath = pathname ? parseDocsPathname(pathname) : undefined
-  const params = new URLSearchParams()
-  if (docsPath?.refSlug) params.set('ref', docsPath.refSlug)
-  if (docsPath?.language) params.set('lang', docsPath.language)
-  const query = params.toString()
-  const searchLanguage = toSearchLanguage(docsPath?.language ?? locale ?? 'en')
-  const {
-    search,
-    setSearch,
-    query: result,
-  } = useDocsSearch({
-    type: 'static',
-    from: `/api/search${query ? `?${query}` : ''}`,
-    initOrama: () => create({ schema: { _: 'string' }, language: searchLanguage }),
-  })
+  const from = toSearchIndexUrl(docsPath?.refSlug, docsPath?.language)
+  // The exported index carries its own tokenizer, so every language searches the way it was indexed.
+  const client = useMemo(() => staticClient({ from }), [from])
+  const search = useDocsSearch({ client })
 
   return (
     <PrimitiveSearchDialog
-      search={search}
-      onSearchChange={setSearch}
-      isLoading={result.isLoading}
+      {...search}
       {...props}
     >
       <SearchDialogOverlay />
@@ -51,8 +37,16 @@ export function SearchDialog(props: SharedProps) {
           <SearchDialogInput />
           <SearchDialogClose />
         </SearchDialogHeader>
-        <SearchDialogList items={result.data !== 'empty' ? result.data : null} />
+        <SearchDialogList />
       </SearchDialogContent>
     </PrimitiveSearchDialog>
   )
+}
+
+function toSearchIndexUrl(refSlug?: string, language?: string) {
+  const params = new URLSearchParams()
+  if (refSlug) params.set('ref', refSlug)
+  if (language) params.set('lang', language)
+  const query = params.toString()
+  return `/api/search${query ? `?${query}` : ''}`
 }

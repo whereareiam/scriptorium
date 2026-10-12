@@ -55,4 +55,3 @@ export {
   getTranslationLanguages,
   toDocsBasePath,
 } from './i18n-utils'
-export { toSearchLanguage } from './search-language'

@@ -1,11 +1,9 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { create, insertMultiple, save } from '@orama/orama'
+import type { AdvancedIndex } from 'fumadocs-core/search/server'
 import type { PrepareRequest } from '@scriptorium/server-worker-api'
 import {
-  getDefaultLanguage,
   toDocsBasePath,
-  toSearchLanguage,
   type ServedBundleManifest,
   type ServedBundleTranslation,
   type ServedBundleVersion,
@@ -13,9 +11,8 @@ import {
 import type { StagedBundle, StagedTranslation } from '../../build-project-bundle'
 import { buildAdvancedIndex } from '../../search/build/build-advanced-index'
 import { buildBreadcrumbs } from '../../search/build/build-breadcrumbs'
-import { buildSearchDocuments } from '../../search/build/build-search-documents'
+import { countSearchRecords, exportSearchIndex } from '../../search/build/export-search-index'
 import { loadSearchSource } from '../../search/load-search-source'
-import { searchSchema } from '../../search/model/search-database'
 import type { BundlingLogger } from '../../../preparation/logging/bundling-logger'
 import { buildPageArtifacts } from './build-page-artifacts'
 import { writePageArtifact } from '../write/write-page-artifact'
@@ -171,11 +168,7 @@ async function buildEdition(
   totals.pageCount += builtPages.artifacts.length
 
   options.setPhase('preparing-search')
-  const searchDatabase = create({
-    schema: searchSchema,
-    language: toSearchLanguage(translation?.language ?? getDefaultLanguage(bundle.project)),
-  })
-
+  const indexes: AdvancedIndex[] = []
   for (const page of source.getPages()) {
     const builtPage = builtPages.artifacts.find((entry) => entry.artifact.url === page.url)
     if (!builtPage) {
@@ -188,23 +181,19 @@ async function buildEdition(
       data: {
         title: page.data.title,
         description: page.data.description,
-        structuredData: builtPage.artifact.renderer.structuredData as any,
+        structuredData: builtPage.artifact.renderer
+          .structuredData as AdvancedIndex['structuredData'],
       },
     })
-    const breadcrumbs = index.breadcrumbs ?? buildBreadcrumbs(source, page)
-    const documents = buildSearchDocuments({
+    indexes.push({
       ...index,
-      breadcrumbs,
+      breadcrumbs: index.breadcrumbs ?? buildBreadcrumbs(source, page),
     })
-    totals.searchDocumentCount += documents.length
-    await insertMultiple(searchDatabase, documents)
+    totals.searchDocumentCount += countSearchRecords(index)
   }
 
   const searchIndexPath = path.join(searchDir, `${version.slug}.json`)
-  const searchBody = JSON.stringify({
-    type: 'advanced',
-    ...save(searchDatabase),
-  })
+  const searchBody = await exportSearchIndex(indexes)
   await writeFile(searchIndexPath, searchBody)
   totals.artifactBytes += Buffer.byteLength(searchBody)
 

@@ -8,8 +8,7 @@
     "@scriptorium/server-api": "workspace:*",
     "@scriptorium/server-worker-api": "workspace:*",
     "@scriptorium/source-api": "workspace:*",
-    "@orama/orama": "^3.1.12",
-    "fumadocs-core": "^16.8.5",
+    "fumadocs-core": "^16.17.1",
     "remark": "^15.0.1",
     "remark-mdx": "^3.1.1"
   }
