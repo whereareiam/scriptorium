@@ -5,9 +5,9 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@fumadocs/local-md": "^0.2.1",
+    "@fumadocs/local-md": "^0.3.5",
     "@scriptorium/server-api": "workspace:*",
-    "fumadocs-core": "^16.8.5",
+    "fumadocs-core": "^16.17.1",
     "react": "^19.2.5"
   }
 }
