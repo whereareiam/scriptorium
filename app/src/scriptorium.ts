@@ -61,6 +61,14 @@ export async function getPreparedPage(slugSegments: string[], language?: string)
   return getRuntimeServices().server.getPreparedPage(slugSegments, language)
 }
 
+export async function hasPreparedPage(
+  refNameOrSlug: string,
+  pageSegments: string[],
+  language?: string,
+) {
+  return getRuntimeServices().server.hasPreparedPage(refNameOrSlug, pageSegments, language)
+}
+
 export async function getSidebarTree(refName: string, language?: string) {
   return getRuntimeServices().server.getSidebarTree(refName, language)
 }

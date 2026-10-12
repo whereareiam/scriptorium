@@ -65,6 +65,10 @@ export class ScriptoriumServer {
     return this.pageArtifactService.getPage(slugSegments, language)
   }
 
+  async hasPreparedPage(refNameOrSlug: string, pageSegments: string[], language?: string) {
+    return this.pageArtifactService.hasPage(refNameOrSlug, pageSegments, language)
+  }
+
   async getSidebarTree(refName: string, language?: string) {
     return this.pageArtifactService.getSidebarTree(refName, language)
   }

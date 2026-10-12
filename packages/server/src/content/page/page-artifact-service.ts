@@ -48,6 +48,20 @@ export class PageArtifactService {
     return value
   }
 
+  /** Whether a version has a page at the given path, in a language or the default one. */
+  async hasPage(refNameOrSlug: string, pageSegments: string[], language?: string) {
+    const { bundle } = await this.getActiveBundleAndManifest()
+    const refName = await this.activeContentService.resolveRefName(refNameOrSlug)
+    const version = resolveVersion(bundle, refName)
+    if (language && !version.translations?.some((entry) => entry.language === language)) {
+      return false
+    }
+
+    const index = await this.getPageIndex(resolveEdition(version, language))
+    const routeKey = toRouteKey(pageSegments)
+    return index.entries.some((entry) => toRouteKey(entry.routeSegments.slice(1)) === routeKey)
+  }
+
   async getPage(routeSegments: string[], language?: string) {
     if (routeSegments.length === 0) {
       return null
