@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import {
+  findStartPageUrl,
   getDefaultLanguage,
   hasUsableContent,
   toDocsBasePath,
@@ -14,6 +15,7 @@ import {
   getProjectConfig,
   getPublishedVersions,
   getRuntimeReadiness,
+  getSidebarTree,
   renderPreparedPageArtifact,
   resolvePreparedPageHref,
 } from '@/scriptorium'
@@ -41,10 +43,7 @@ export async function DocsPageView({
   }
 
   await redirectWhenUntranslated(project, slug, language)
-  const page = await getPreparedPage(slug, language)
-  if (!page) {
-    notFound()
-  }
+  const page = await getPageOrStartPage(slug, language)
 
   // Project components may only replace a built-in one they declare as an override, which
   // preparation checks, so laying them over the built-ins never shadows one by accident.
@@ -103,10 +102,7 @@ export async function buildDocsPageMetadata({
   }
 
   await redirectWhenUntranslated(project, slug, language)
-  const page = await getPreparedPage(slug, language)
-  if (!page) {
-    notFound()
-  }
+  const page = await getPageOrStartPage(slug, language)
 
   const version = await findVersion(slug[0])
   return {
@@ -140,6 +136,26 @@ async function redirectWhenUntranslated(
   if (version && !version.languages.includes(language)) {
     redirect(`${toDocsBasePath(project)}/${slug.join('/')}`)
   }
+}
+
+/**
+ * The page at `slug`. A version whose content has no index page opens its start page, the
+ * first page of its first section, rather than nothing.
+ */
+async function getPageOrStartPage(slug: string[], language?: string) {
+  const page = await getPreparedPage(slug, language)
+  if (page) {
+    return page
+  }
+
+  if (slug.length === 1) {
+    const startPageUrl = findStartPageUrl(await getSidebarTree(slug[0], language))
+    if (startPageUrl) {
+      redirect(startPageUrl)
+    }
+  }
+
+  notFound()
 }
 
 async function findVersion(refSlug: string) {
