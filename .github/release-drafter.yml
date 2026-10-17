@@ -19,10 +19,6 @@ template: |
 
   **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...$RESOLVED_TAG
 
-  # Running Scriptorium
-
-  See the [README](https://github.com/whereareiam/scriptorium#readme) for the runtime configuration and the docs contract of projects.
-
 categories:
   - type: pre-exclude
     when:
