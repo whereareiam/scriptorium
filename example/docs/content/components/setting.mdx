@@ -1,0 +1,61 @@
+---
+title: Setting
+description: Fields of a configuration reference.
+---
+
+`Setting` describes one field of a configuration reference. Its name becomes a heading, so each
+field has an anchor, an entry in the table of contents and a search result.
+
+## Server
+
+<Setting
+  name="server.port"
+  takes="`1`–`65535`"
+  default="8080"
+  affects="The port the server listens on. Takes effect after a restart."
+>
+  Pick a port that no other service on the machine uses.
+</Setting>
+
+<Setting
+  name="server.threads"
+  takes="integer"
+  default="4"
+  affects="Request handling"
+  flag="advanced"
+/>
+
+<Setting
+  name="storage.wipe-on-start"
+  takes="`true` or `false`"
+  default="false"
+  affects="All stored data"
+  flag="danger"
+>
+  Deletes every stored record whenever the server starts. Use it only for throwaway test servers.
+</Setting>
+
+<Setting
+  name="storage.engine"
+  takes="`sqlite`"
+  flag="reserved"
+>
+  Kept for a future version; no other value is accepted yet.
+</Setting>
+
+## Usage
+
+```mdx
+<Setting
+  name="server.port"
+  takes="`1`–`65535`"
+  default="8080"
+  affects="The port the server listens on."
+  flag="advanced"
+>
+  Further explanation, as any MDX.
+</Setting>
+```
+
+`flag` is one of `advanced`, `warning`, `danger`, `experimental` and `reserved`. `depth` sets the
+heading level (3 by default) and `id` the anchor.

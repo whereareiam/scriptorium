@@ -8,6 +8,7 @@
     "@scriptorium/server-api": "workspace:*",
     "@scriptorium/server-worker-api": "workspace:*",
     "@scriptorium/source-api": "workspace:*",
+    "esbuild": "^0.28.2",
     "fumadocs-core": "^16.17.1",
     "remark": "^15.0.1",
     "remark-mdx": "^3.1.1"

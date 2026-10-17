@@ -10,6 +10,7 @@ import {
 } from '@scriptorium/server-api'
 import {
   getPreparedPage,
+  getProjectComponents,
   getProjectConfig,
   getPublishedVersions,
   getRuntimeReadiness,
@@ -18,6 +19,7 @@ import {
 } from '@/scriptorium'
 import { getInterfaceText, getMDXComponents, TranslationNotice } from '@scriptorium/ui'
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/layouts/docs/page'
+import type { MDXComponents } from 'mdx/types'
 import type { ComponentProps, FC } from 'react'
 
 /** A docs page in one language; `language` is absent for the default language. */
@@ -44,7 +46,9 @@ export async function DocsPageView({
     notFound()
   }
 
-  const components = getMDXComponents()
+  // Project components may only replace a built-in one they declare as an override, which
+  // preparation checks, so laying them over the built-ins never shadows one by accident.
+  const components = getMDXComponents((await getProjectComponents(slug[0])) as MDXComponents)
   const { body, toc } = await renderPreparedPageArtifact(page, {
     ...components,
     a: createPreparedRelativeLink(

@@ -1,4 +1,7 @@
 {
   "title": "Guides",
+  "description": "Setting up and running a docs site",
+  "icon": "BookOpen",
+  "root": true,
   "pages": ["getting-started"]
 }

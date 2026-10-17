@@ -89,11 +89,13 @@ async function collectWatchDirectories(projectRoot: string) {
     path.join(projectRoot, 'docs'),
     path.join(projectRoot, 'docs', 'content'),
     path.join(projectRoot, 'docs', 'assets'),
+    path.join(projectRoot, 'docs', 'components'),
     path.join(projectRoot, 'docs', 'i18n'),
   ])
 
   await collectNestedDirectories(path.join(projectRoot, 'docs', 'content'), directories)
   await collectNestedDirectories(path.join(projectRoot, 'docs', 'assets'), directories)
+  await collectNestedDirectories(path.join(projectRoot, 'docs', 'components'), directories)
   await collectNestedDirectories(path.join(projectRoot, 'docs', 'i18n'), directories)
   return Array.from(directories)
 }

@@ -1,4 +1,5 @@
 import type { Translations } from 'fumadocs-ui/i18n'
+import type { SettingFlag } from '../components/setting'
 
 /** Texts of Scriptorium's own interface, next to the Fumadocs ones. */
 export interface ScriptoriumText {
@@ -10,6 +11,17 @@ export interface ScriptoriumText {
   /** Offered in the suggested language itself, to readers whose browser prefers it. */
   languageSuggestion: string
   languageSuggestionAction: string
+  /** The accessible name of the version menu in the sidebar. */
+  chooseVersion: string
+  /** The section menu in the sidebar, on pages that belong to no section. */
+  chooseSection: string
+  /** Labels of the `<Setting>` component of configuration references. */
+  setting: {
+    takes: string
+    default: string
+    affects: string
+    flags: Record<SettingFlag, string>
+  }
 }
 
 export interface InterfaceText {
@@ -28,6 +40,20 @@ const ENGLISH: InterfaceText = {
     openOriginal: 'Open the original',
     languageSuggestion: 'This documentation is available in English.',
     languageSuggestionAction: 'Switch to English',
+    chooseVersion: 'Choose a version',
+    chooseSection: 'Choose a section',
+    setting: {
+      takes: 'Takes',
+      default: 'Default',
+      affects: 'Affects',
+      flags: {
+        advanced: 'Advanced',
+        warning: 'Warning',
+        danger: 'Danger',
+        experimental: 'Experimental',
+        reserved: 'Reserved',
+      },
+    },
   },
 }
 
@@ -97,6 +123,20 @@ const RUSSIAN: InterfaceText = {
     openOriginal: 'Открыть оригинал',
     languageSuggestion: 'Эта документация есть на русском языке.',
     languageSuggestionAction: 'Читать на русском',
+    chooseVersion: 'Выбрать версию',
+    chooseSection: 'Выберите раздел',
+    setting: {
+      takes: 'Принимает',
+      default: 'По умолчанию',
+      affects: 'Влияет на',
+      flags: {
+        advanced: 'Для опытных',
+        warning: 'Осторожно',
+        danger: 'Опасно',
+        experimental: 'Экспериментально',
+        reserved: 'Зарезервировано',
+      },
+    },
   },
 }
 

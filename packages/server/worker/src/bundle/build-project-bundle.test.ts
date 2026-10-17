@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import type { ScriptoriumProjectConfig } from '@scriptorium/server-api'
@@ -34,6 +34,43 @@ describe('buildProjectBundle', () => {
       })
 
       expect(bundle.versions.map((version) => version.name)).toEqual(['dev'])
+    } finally {
+      await rm(projectRoot, { recursive: true, force: true })
+      await rm(outputDir, { recursive: true, force: true })
+    }
+  })
+
+  test('stages the project components of each ref on their own', async () => {
+    const projectRoot = await createProjectRoot()
+    const outputDir = await mkdtemp(path.join(os.tmpdir(), 'scriptorium-bundle-output-'))
+
+    try {
+      const bundle = await buildProjectBundle({
+        projectRoot,
+        outputDir,
+        repository: createRepository({
+          repoRoot: projectRoot,
+          refs: [makeRef('dev', 'branch'), makeRef('0.2.0', 'tag')],
+          filesByRef: {
+            'refs/heads/dev': [
+              'docs/content/index.mdx',
+              'docs/components/Notice.tsx',
+              'scriptorium.project.json',
+            ],
+            'refs/tags/0.2.0': ['docs/content/index.mdx', 'scriptorium.project.json'],
+          },
+        }),
+        async loadProject() {
+          return createProject()
+        },
+      })
+
+      const [dev, tag] = bundle.versions
+      expect(dev.componentsDir).toBe(path.join(outputDir, 'versions', 'dev', 'components'))
+      expect(await readFile(path.join(dev.componentsDir!, 'Notice.tsx'), 'utf8')).toBe(
+        'content for docs/components/Notice.tsx',
+      )
+      expect(tag.componentsDir).toBeUndefined()
     } finally {
       await rm(projectRoot, { recursive: true, force: true })
       await rm(outputDir, { recursive: true, force: true })

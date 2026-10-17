@@ -25,11 +25,13 @@ import {
   getInterfaceText,
   LanguageProvider,
   LanguageSuggestion,
+  SidebarNavigation,
 } from '@scriptorium/ui'
 import { resolveProjectAssetUrl } from '../_layout/project-assets'
+import { toSidebarTree } from './sidebar-tree'
 
 /**
- * The docs chrome of one language: sidebar, version tabs and the language menu.
+ * The docs chrome of one language: sidebar, version and section menus and the language menu.
  * `language` is absent for the default language.
  */
 export async function DocsLayoutView({
@@ -56,13 +58,13 @@ export async function DocsLayoutView({
     versions.find((version: PublishedVersion) => toRefSlug(version.name) === currentRefSlug) ??
     versions[0]
   const currentRefName = currentVersion?.name ?? project.versions.home
-  const tree = (await getSidebarTree(currentRefName, language)) as any
+  const tree = toSidebarTree(await getSidebarTree(currentRefName, language))
   const homeUrl = `${docsBasePath}/${toRefSlug(project.versions.home)}`
   const logoUrl = resolveProjectAssetUrl(project.logo)
   const links = (project.links ?? []).map(toLayoutLink)
   const versionLanguages = currentVersion?.languages ?? [defaultLanguage]
   const pageSegments = slug?.slice(1) ?? []
-  const tabs = await Promise.all(
+  const versionOptions = await Promise.all(
     versions
       .filter((version: PublishedVersion) => !language || version.languages.includes(language))
       .map(async (version: PublishedVersion) => {
@@ -72,7 +74,9 @@ export async function DocsLayoutView({
           pageSegments.length > 0 && (await hasPreparedPage(version.name, pageSegments, language))
         return {
           title: resolveRefLabel(project, version.name),
+          kind: version.kind,
           url: samePage ? `${versionUrl}/${pageSegments.join('/')}` : versionUrl,
+          active: version.name === currentRefName,
         }
       }),
   )
@@ -98,7 +102,19 @@ export async function DocsLayoutView({
         tree={tree}
         links={links}
         themeSwitch={{ mode: 'light-dark-system' }}
-        tabs={tabs}
+        // Root folders become the section menu, below the version menu, so both are drawn
+        // in the sidebar banner instead of the layout's own tabs.
+        tabs={false}
+        sidebar={{
+          banner: (
+            <SidebarNavigation
+              key="navigation"
+              versions={versionOptions}
+              versionLabel={getInterfaceText(activeLanguage).scriptorium.chooseVersion}
+              sectionPlaceholder={getInterfaceText(activeLanguage).scriptorium.chooseSection}
+            />
+          ),
+        }}
         nav={{
           title: (
             <span className="inline-flex items-center gap-2.5">

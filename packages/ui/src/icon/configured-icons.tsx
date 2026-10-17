@@ -12,10 +12,16 @@ const CUSTOM_ICONS = {
 } satisfies Record<string, (props: SVGProps<SVGSVGElement>) => ReactElement>
 
 export function createConfiguredIcon(iconName: string) {
-  return createElement(resolveConfiguredIcon(iconName), {})
+  return createElement(resolveConfiguredIcon(iconName) ?? Icons.ExternalLink, {})
 }
 
-function resolveConfiguredIcon(iconName: string): LucideIcon {
+/** The icon of a sidebar entry, or nothing when no icon has that name. */
+export function createSidebarIcon(iconName: string) {
+  const icon = resolveConfiguredIcon(iconName)
+  return icon ? createElement(icon, {}) : undefined
+}
+
+function resolveConfiguredIcon(iconName: string): LucideIcon | undefined {
   const normalized = normalizeIconName(iconName)
   const custom = CUSTOM_ICONS[normalized as keyof typeof CUSTOM_ICONS]
   if (custom) {
@@ -23,25 +29,33 @@ function resolveConfiguredIcon(iconName: string): LucideIcon {
   }
 
   const direct = Icons[iconName as keyof typeof Icons]
-  if (typeof direct === 'function') {
+  if (isIconComponent(direct)) {
     return direct as LucideIcon
   }
 
   const alias = ICON_NAME_ALIASES[normalizeIconName(iconName)]
   if (alias) {
     const aliased = Icons[alias]
-    if (typeof aliased === 'function') {
+    if (isIconComponent(aliased)) {
       return aliased as LucideIcon
     }
   }
 
   for (const [key, value] of Object.entries(Icons)) {
-    if (normalizeIconName(key) === normalized && typeof value === 'function') {
+    if (normalizeIconName(key) === normalized && isIconComponent(value)) {
       return value as LucideIcon
     }
   }
 
-  return Icons.ExternalLink
+  return undefined
+}
+
+/** Lucide icons are functions or, wrapped in `forwardRef`, objects with a render function. */
+function isIconComponent(value: unknown) {
+  return (
+    typeof value === 'function' ||
+    (typeof value === 'object' && value !== null && 'render' in value)
+  )
 }
 
 function normalizeIconName(value: string) {

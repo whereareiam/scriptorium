@@ -19,7 +19,11 @@ import { createGitSourceAdapter } from '@scriptorium/source-git'
 import { createLocalSourceAdapter } from '@scriptorium/source-local'
 import { createGitHubTriggerHandler } from '@scriptorium/trigger-github'
 import type { TriggerHandler } from '@scriptorium/trigger-api'
-import { buildWorkspaceThemeStylesheet } from '@scriptorium/ui'
+import {
+  buildWorkspaceThemeStylesheet,
+  getMDXComponents,
+  projectComponentModules,
+} from '@scriptorium/ui'
 
 interface RuntimeServices {
   server: ScriptoriumServer
@@ -59,6 +63,10 @@ export async function getPublishedVersions() {
 
 export async function getPreparedPage(slugSegments: string[], language?: string) {
   return getRuntimeServices().server.getPreparedPage(slugSegments, language)
+}
+
+export async function getProjectComponents(refNameOrSlug: string) {
+  return getRuntimeServices().server.getProjectComponents(refNameOrSlug)
 }
 
 export async function hasPreparedPage(
@@ -131,6 +139,7 @@ function createRuntimeServices(): RuntimeServices {
   const server = createScriptoriumServer({
     generationsDir: runtimePaths.generationsDir,
     stateFile: runtimePaths.stateFile,
+    componentModules: projectComponentModules,
   })
   const triggerHandler = createGitHubTriggerHandler({
     secret: config.triggers?.webhook?.secret,
@@ -172,6 +181,7 @@ function createWorker(runtimePaths: RuntimePaths, sourceAdapter: SourceAdapter):
   return createWorkerService({
     sourceAdapter,
     runtimePaths,
+    builtInComponentNames: Object.keys(getMDXComponents()),
     async loadProject(projectRoot) {
       const project = await loadProjectConfig(projectRoot)
 

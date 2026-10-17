@@ -1,9 +1,9 @@
 import { localMd, type LocalMarkdownPage } from '@fumadocs/local-md'
 import { loader, type LoaderPlugin, type MetaData, type VirtualFile } from 'fumadocs-core/source'
-import { remarkSteps } from 'fumadocs-core/mdx-plugins'
-import { lucideIconsPlugin } from 'fumadocs-core/source/lucide-icons'
+import { remarkHeading, remarkSteps } from 'fumadocs-core/mdx-plugins'
 import { getRefMetadata } from '@scriptorium/server-api'
 import type { StagedBundle } from '../build-project-bundle'
+import { remarkSettingHeadings } from '../mdx/remark-setting-headings'
 
 type CombinedPageData = LocalMarkdownPage
 type CombinedMetaData = MetaData
@@ -32,7 +32,9 @@ export async function loadSearchSource(
     dir: edition.contentDir ?? version.contentDir,
     include: ['**/*.{md,mdx,json}'],
     mdxOptions: {
-      remarkPlugins: [remarkSteps],
+      // Headings get their ids after <Setting> has added its own, so those have anchors too.
+      remarkHeadingOptions: false,
+      remarkPlugins: [remarkSettingHeadings, [remarkHeading, { generateToc: false }], remarkSteps],
     },
   })
   const staticSource = await docs.staticSource()
@@ -43,7 +45,8 @@ export async function loadSearchSource(
     { files },
     {
       baseUrl: edition.baseUrl ?? '/docs',
-      plugins: [lucideIconsPlugin(), disableLeafFolderCollapsingPlugin()],
+      // Icons stay names here, so the served sidebar can store them; the app draws them.
+      plugins: [disableLeafFolderCollapsingPlugin()],
     },
   )
 }

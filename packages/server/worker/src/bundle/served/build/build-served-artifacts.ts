@@ -14,6 +14,7 @@ import { buildBreadcrumbs } from '../../search/build/build-breadcrumbs'
 import { countSearchRecords, exportSearchIndex } from '../../search/build/export-search-index'
 import { loadSearchSource } from '../../search/load-search-source'
 import type { BundlingLogger } from '../../../preparation/logging/bundling-logger'
+import { bundleProjectComponents } from '../../components/bundle-project-components'
 import { buildPageArtifacts } from './build-page-artifacts'
 import { writePageArtifact } from '../write/write-page-artifact'
 import { writePageIndex } from '../write/write-page-index'
@@ -33,6 +34,8 @@ export async function buildServedArtifacts(
   options: {
     logger?: BundlingLogger
     request?: PrepareRequest
+    /** Names of Scriptorium's own MDX components, which project components must not shadow. */
+    builtInComponentNames?: Iterable<string>
     setPhase: (phase: 'preparing-content' | 'preparing-search') => void
   },
 ): Promise<BuiltServedArtifacts> {
@@ -54,6 +57,12 @@ export async function buildServedArtifacts(
       ref_name: version.name,
     })
 
+    const componentsPath = await buildProjectComponents(
+      version,
+      generationDir,
+      totals,
+      options.builtInComponentNames,
+    )
     const defaultEdition = await buildEdition(bundle, version, generationDir, totals, options)
     const translations: ServedBundleTranslation[] = []
     for (const translation of version.translations) {
@@ -77,6 +86,7 @@ export async function buildServedArtifacts(
       slug: version.slug,
       kind: version.kind,
       ...defaultEdition,
+      ...(componentsPath ? { componentsPath } : {}),
       ...(translations.length > 0 ? { translations } : {}),
     })
     options.logger?.emit('bundle_ref_finished', {
@@ -104,6 +114,37 @@ export async function buildServedArtifacts(
     ref_count: versions.length,
     search_document_count: totals.searchDocumentCount,
   }
+}
+
+async function buildProjectComponents(
+  version: StagedBundle['versions'][number],
+  generationDir: string,
+  totals: EditionTotals,
+  builtInComponentNames?: Iterable<string>,
+) {
+  if (!version.componentsDir) {
+    return undefined
+  }
+
+  let code
+  try {
+    code = await bundleProjectComponents(version.componentsDir, builtInComponentNames)
+  } catch (error) {
+    throw new Error(
+      `Ref "${version.name}": ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    )
+  }
+
+  if (!code) {
+    return undefined
+  }
+
+  const componentsPath = path.join(generationDir, 'components', `${version.slug}.cjs`)
+  await mkdir(path.dirname(componentsPath), { recursive: true })
+  await writeFile(componentsPath, code)
+  totals.artifactBytes += Buffer.byteLength(code)
+  return componentsPath
 }
 
 interface EditionTotals {
