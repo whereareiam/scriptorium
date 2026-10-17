@@ -1,6 +1,7 @@
 import { resolveBundlingCaptions } from '@scriptorium/server-api'
 import { ActiveContentService } from './content/active-content-service'
 import { CurrentAssetService } from './content/current-asset-service'
+import { ProjectComponentService } from './content/component/project-component-service'
 import { PageArtifactService } from './content/page/page-artifact-service'
 import { renderPreparedPageArtifact } from './content/page/page-runtime-renderer'
 import { HealthController } from './controllers/health-controller'
@@ -12,6 +13,11 @@ import { RuntimeStatusService } from './status-service'
 export interface ScriptoriumServerOptions {
   generationsDir: string
   stateFile: string
+  /**
+   * The modules project components may import, keyed by specifier, one for each of
+   * `PROJECT_COMPONENT_MODULES`.
+   */
+  componentModules?: Record<string, unknown>
 }
 
 export class ScriptoriumServer {
@@ -19,6 +25,7 @@ export class ScriptoriumServer {
   private readonly activeContentService: ActiveContentService
   private readonly pageArtifactService: PageArtifactService
   private readonly currentAssetService: CurrentAssetService
+  private readonly projectComponentService: ProjectComponentService
   private readonly searchIndexService: SearchIndexService
   private readonly healthController = new HealthController()
   private readonly readinessController: ReadinessController
@@ -32,6 +39,10 @@ export class ScriptoriumServer {
     )
     this.pageArtifactService = new PageArtifactService(this.activeContentService)
     this.currentAssetService = new CurrentAssetService(this.activeContentService)
+    this.projectComponentService = new ProjectComponentService(
+      this.activeContentService,
+      options.componentModules ?? {},
+    )
     this.searchIndexService = new SearchIndexService(
       this.runtimeStatusService,
       this.activeContentService,
@@ -63,6 +74,11 @@ export class ScriptoriumServer {
 
   async getPreparedPage(slugSegments: string[], language?: string) {
     return this.pageArtifactService.getPage(slugSegments, language)
+  }
+
+  /** The MDX components a version ships in `docs/components`, by name. */
+  async getProjectComponents(refNameOrSlug: string) {
+    return this.projectComponentService.getComponents(refNameOrSlug)
   }
 
   async hasPreparedPage(refNameOrSlug: string, pageSegments: string[], language?: string) {

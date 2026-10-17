@@ -1,8 +1,8 @@
 # AGENTS.md
 
 Scriptorium is the documentation runtime for the whereareiam projects. A project keeps its docs in its
-own repository (`docs/content`, `docs/assets`, `scriptorium.project.json`); Scriptorium fetches them at
-runtime, bundles every published version into Fumadocs pages and a search index, and serves them from
+own repository (`docs/content`, `docs/assets`, optional `docs/components`, `scriptorium.project.json`); Scriptorium fetches them at
+runtime, bundles every published version into Fumadocs pages, project components and a search index, and serves them from
 one Next.js app. Content changes need no image build or redeployment.
 
 ## Packages

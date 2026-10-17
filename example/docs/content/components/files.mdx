@@ -1,0 +1,48 @@
+---
+title: Files
+description: File trees with Files, Folder and File.
+icon: FolderTree
+---
+
+`Files`, `Folder` and `File` draw a file tree, such as the layout a project's docs follow.
+
+## Example
+
+<Files>
+  <Folder
+    name="docs"
+    defaultOpen
+  >
+    <Folder
+      name="content"
+      defaultOpen
+    >
+      <File name="meta.json" />
+      <File name="index.mdx" />
+    </Folder>
+    <Folder name="components">
+      <File name="ReleaseCard.tsx" />
+    </Folder>
+    <Folder name="assets">
+      <File name="logo.svg" />
+    </Folder>
+  </Folder>
+  <File name="scriptorium.project.json" />
+</Files>
+
+## Usage
+
+```mdx
+<Files>
+  <Folder
+    name="docs"
+    defaultOpen
+  >
+    <File name="index.mdx" />
+  </Folder>
+  <File name="scriptorium.project.json" />
+</Files>
+```
+
+`File` and `Folder` here are the file tree components. The Lucide icons of the same name are
+available as `FileIcon` and `FolderIcon`.

@@ -1,0 +1,62 @@
+---
+title: Setting
+description: Поля справочника по конфигурации.
+sourceHash: dfd2febcc1c779f7895276a571d508a89d746946
+---
+
+`Setting` описывает одно поле справочника по конфигурации. Его имя становится заголовком, поэтому у
+каждого поля есть якорь, пункт в оглавлении и результат в поиске.
+
+## Сервер
+
+<Setting
+  name="server.port"
+  takes="`1`–`65535`"
+  default="8080"
+  affects="Порт, на котором работает сервер. Применяется после перезапуска."
+>
+  Выберите порт, который не занят другими службами на этой машине.
+</Setting>
+
+<Setting
+  name="server.threads"
+  takes="integer"
+  default="4"
+  affects="Обработку запросов"
+  flag="advanced"
+/>
+
+<Setting
+  name="storage.wipe-on-start"
+  takes="`true` или `false`"
+  default="false"
+  affects="Все сохранённые данные"
+  flag="danger"
+>
+  Удаляет все сохранённые записи при каждом запуске сервера. Только для одноразовых тестовых серверов.
+</Setting>
+
+<Setting
+  name="storage.engine"
+  takes="`sqlite`"
+  flag="reserved"
+>
+  Оставлено для будущей версии; других значений пока нет.
+</Setting>
+
+## Использование
+
+```mdx
+<Setting
+  name="server.port"
+  takes="`1`–`65535`"
+  default="8080"
+  affects="The port the server listens on."
+  flag="advanced"
+>
+  Дальнейшее описание, любым MDX.
+</Setting>
+```
+
+`flag` принимает `advanced`, `warning`, `danger`, `experimental` и `reserved`. `depth` задаёт
+уровень заголовка (по умолчанию 3), а `id` — якорь.

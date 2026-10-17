@@ -42,8 +42,14 @@ try {
       versions: { home: 'dev' },
     }),
   )
+  await mkdir(path.join(source, 'docs/components'), { recursive: true })
+  await writeFile(
+    path.join(source, 'docs/components/Greeting.tsx'),
+    "import { Callout } from 'fumadocs-ui/components/callout'\n" +
+      'export default function Greeting() { return <Callout>Rendered by a project component.</Callout> }\n',
+  )
   const page = path.join(source, 'docs/content/index.mdx')
-  await writeFile(page, '---\ntitle: Cache fixture\n---\nInitial documentation.\n')
+  await writeFile(page, '---\ntitle: Cache fixture\n---\nInitial documentation.\n\n<Greeting />\n')
   const git = (...args) => execFileSync('git', args, { cwd: source, stdio: 'pipe' })
   git('init', '--initial-branch', 'dev')
   git('config', 'user.name', 'Scriptorium Test')
@@ -93,7 +99,7 @@ try {
     'Provider-specific headers belong to the deployment',
   )
   assert.match(html.headers.get('content-type'), /text\/html/)
-  await html.arrayBuffer()
+  assert.match(await html.text(), /Rendered by a project component\./, 'Project components render')
   for (const headers of [
     { RSC: '1' },
     { RSC: '1', 'Next-Router-Prefetch': '1' },

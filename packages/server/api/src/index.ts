@@ -55,3 +55,9 @@ export {
   getTranslationLanguages,
   toDocsBasePath,
 } from './i18n-utils'
+export {
+  evaluateProjectComponents,
+  PROJECT_COMPONENT_MODULES,
+  type ProjectComponent,
+  type ProjectComponentModule,
+} from './components/project-components'

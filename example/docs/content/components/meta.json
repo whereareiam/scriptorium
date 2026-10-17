@@ -1,4 +1,7 @@
 {
   "title": "Components",
-  "pages": ["tabs"]
+  "description": "What pages can use",
+  "icon": "Blocks",
+  "root": true,
+  "pages": ["tabs", "setting", "files", "project-components"]
 }

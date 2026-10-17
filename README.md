@@ -19,6 +19,7 @@ Consumer contract:
 
 - `docs/content/**`: bundled documentation files
 - `docs/assets/**`: project branding assets
+- `docs/components/*.tsx`: optional MDX components of the project
 - `docs/i18n/<language>/**`: optional translations of `docs/content`
 - `scriptorium.project.json`: project metadata and published-version policy
 
@@ -30,6 +31,8 @@ Consumer repositories only need:
 - `docs/assets/**`
 - `scriptorium.project.json`
 
+and may add `docs/components/**` and `docs/i18n/**`.
+
 Shared doc-only partials can live under `docs/content/_partials/**` and be reused from MDX with:
 
 ```mdx
@@ -37,6 +40,128 @@ Shared doc-only partials can live under `docs/content/_partials/**` and be reuse
 ```
 
 Those partials are expanded at compile time, so they stay out of navigation as standalone pages while remaining part of the page's compiled content for things like search and table-of-contents extraction.
+
+## Navigation
+
+The top of the sidebar holds two menus:
+
+- **Version**: the published branches and tags, shown when there is more than one. Switching keeps
+  the reader on the same page when the other version has it, and opens its start page otherwise.
+- **Sections**: one entry per root folder. Mark a folder as a section with `"root": true` in its
+  `meta.json`; the sidebar then shows only the section the reader is in, and the menu switches
+  between sections, for example one per audience:
+
+  ```text
+  docs/content/
+    meta.json              { "pages": ["index", "server", "reference", "developers", "contributing"] }
+    server/meta.json       { "title": "Server admins", "description": "Install and run", "root": true }
+    reference/meta.json    { "title": "Configuration reference", "root": true }
+    developers/meta.json   { "title": "Developers", "root": true }
+    contributing/meta.json { "title": "Contributing", "root": true }
+  ```
+
+  A section's `description` is shown under its title in the menu. On a page outside every section,
+  such as the start page, the sidebar shows the whole tree and the menu offers the sections.
+
+Folders, sections and pages can carry a [Lucide](https://lucide.dev/icons) icon in the sidebar:
+`"icon": "BookOpen"` in a folder's `meta.json`, or `icon: BookOpen` in a page's frontmatter. The name
+may also be written in lowercase or kebab-case (`book-open`); an unknown name shows no icon.
+
+## Configuration references
+
+`<Setting>` describes one field of a configuration reference:
+
+```mdx
+<Setting
+  name="server.port"
+  takes="1-65535"
+  default="8080"
+  affects="The port the server listens on. Takes effect after a restart."
+  flag="advanced"
+>
+  Further explanation, as any MDX.
+</Setting>
+```
+
+- `name` becomes a heading, so each field has an anchor, an entry in the table of contents and a
+  search result. `depth` sets the heading level (3 by default) and `id` the anchor, which is otherwise
+  derived from the name (`server.port` → `#serverport`).
+- `takes`, `default` and `affects` are optional. In them, text in backticks is shown as code, as in
+  ``takes="an integer from `0` to `4`"``; a `default` without backticks is shown as code as a
+  whole. They also take MDX, such as `takes={<>one of <code>RANDOM</code> or <code>OFFLINE</code></>}`.
+- `flag` marks the setting with a label and a coloured rule down its side: `advanced`, `warning`,
+  `danger`, `experimental` or `reserved`.
+- Its labels (Takes, Default, Affects and the badges) follow the page's language; Scriptorium ships
+  them in English and Russian.
+- Write the tag over several lines as above: Fumadocs indexes a one-line element as a sentence of
+  text, so a one-line `<Setting ... />` gets no search entry of its own.
+
+## File trees
+
+`<Files>`, `<Folder>` and `<File>` are the [Fumadocs file tree](https://fumadocs.dev/docs/ui/components/files):
+
+```mdx
+<Files>
+  <Folder
+    name="docs"
+    defaultOpen
+  >
+    <File name="index.mdx" />
+  </Folder>
+  <File name="scriptorium.project.json" />
+</Files>
+```
+
+They take the names of the Lucide `File` and `Folder` icons, which stay available as `FileIcon` and
+`FolderIcon`.
+
+## Project components
+
+A project can ship its own MDX components with its docs. Each `docs/components/<Name>.tsx` (or
+`.jsx`) whose name starts with a capital letter becomes `<Name>` on every page and translation of
+the same version:
+
+```tsx
+// docs/components/ReleaseCard.tsx
+import { Card } from 'fumadocs-ui/components/card'
+import { Badge } from '@scriptorium/ui'
+
+export default function ReleaseCard({ version, children }) {
+  return (
+    <Card title={`Release ${version}`}>
+      <Badge type="success">Stable</Badge>
+      {children}
+    </Card>
+  )
+}
+```
+
+```mdx
+<ReleaseCard version="1.2.0">Pages keep their place when you switch versions.</ReleaseCard>
+```
+
+- The file exports the component as its default export or under its own name. Other files, such as
+  `docs/components/lib/format.ts`, are only used through imports.
+- Components are bundled during preparation, per version: each branch and tag renders with the
+  components it contains. In local mode, saving a component prepares the docs again.
+- A component can import `react`, `react/jsx-runtime`, `lucide-react`, the Fumadocs UI components
+  (`fumadocs-ui/components/accordion`, `banner`, `callout`, `card`, `codeblock`, `files`, `heading`,
+  `image-zoom`, `inline-toc`, `steps`, `tabs`, `type-table`), Scriptorium's own components from
+  `@scriptorium/ui`, and files inside `docs/components`. Scriptorium provides these; nothing is
+  installed for the project. Any other package, a Node built-in such as `fs`, or a file outside
+  `docs/components` fails the preparation with the file and line, and the previous content stays
+  online.
+- Components render on the server, like the rest of the page: they cannot use state or effects
+  (`useState`, `useEffect`) or add their own client code, but they can use the provided interactive
+  components such as tabs and accordions.
+- A component cannot take the name of a built-in one (`Callout`, `Tabs`, `Setting`, a Lucide icon,
+  and so on); preparation fails instead. To replace a built-in on purpose, add
+  `export const override = true` to the file.
+- Search and the table of contents read the page's MDX, as for built-in components: headings and text
+  written in the page are indexed, text a component produces by itself is not.
+
+Components run with the same trust as the pages: they come from the branches and tags the deployment
+publishes, and render inside the Scriptorium server.
 
 ## Translations
 
@@ -148,6 +273,7 @@ The local example lives in `example/` and mirrors the consumer contract:
 
 - `example/docs/content/**`
 - `example/docs/assets/**`
+- `example/docs/components/**`
 - `example/scriptorium.project.json`
 
 For local development, the app reads `app/scriptorium.json` when present.

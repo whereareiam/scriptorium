@@ -21,6 +21,11 @@ const config = {
     '@scriptorium/trigger-github',
     '@scriptorium/ui',
   ],
+  // esbuild bundles project components at runtime and loads its native binary itself.
+  serverExternalPackages: ['esbuild'],
+  outputFileTracingIncludes: {
+    '/**': ['../node_modules/esbuild/**', '../node_modules/@esbuild/**'],
+  },
   outputFileTracingRoot: path.join(__dirname, '..'),
 }
 

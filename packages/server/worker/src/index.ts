@@ -19,6 +19,8 @@ export function createWorkerService(options: {
     project: ScriptoriumProjectConfig
     workerProject: WorkerProject
   }>
+  /** Names of the MDX components the app provides; project components must not shadow them. */
+  builtInComponentNames?: Iterable<string>
 }): WorkerService {
   const logger = new BundlingLogger(options.sourceAdapter.type)
   let lastBuiltFingerprint: string | undefined
@@ -51,6 +53,7 @@ export function createWorkerService(options: {
       const servedArtifacts = await buildServedArtifacts(stagedBundle, generationDir, {
         logger,
         request,
+        builtInComponentNames: options.builtInComponentNames,
         setPhase,
       })
       await writeServedBundleManifest(bundleDir, servedArtifacts.manifest)

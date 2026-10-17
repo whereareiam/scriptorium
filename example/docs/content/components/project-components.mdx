@@ -1,0 +1,23 @@
+---
+title: Project components
+description: Components a project ships with its docs in docs/components.
+---
+
+A project can add its own MDX components next to its docs. Each `docs/components/<Name>.tsx`
+becomes `<Name>` on every page and translation of the same version.
+
+## Example
+
+`ReleaseCard` comes from `example/docs/components/ReleaseCard.tsx`:
+
+<ReleaseCard version="1.2.0" stable>
+  Pages keep their place when you switch versions.
+</ReleaseCard>
+
+## Usage
+
+```mdx
+<ReleaseCard version="1.2.0" stable>
+  Pages keep their place when you switch versions.
+</ReleaseCard>
+```

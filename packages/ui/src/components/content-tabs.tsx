@@ -42,20 +42,23 @@ export function ContentTabs({
 
         onValueChange?.(nextValue)
       }}
-      className={['my-6 flex flex-col gap-6', typeof className === 'string' ? className : undefined]
+      className={[
+        'my-6 flex flex-col overflow-hidden rounded-xl border border-fd-border bg-fd-card',
+        typeof className === 'string' ? className : undefined,
+      ]
         .filter(Boolean)
         .join(' ')}
     >
-      <PrimitiveTabsList className="inline-flex w-fit max-w-full flex-row items-center gap-1 overflow-x-auto rounded-xl border border-fd-border bg-fd-muted p-1">
+      <PrimitiveTabsList className="flex flex-row gap-1 overflow-x-auto px-3 shadow-[inset_0_-1px_0_var(--color-fd-border)]">
         {items.map((item) => (
           <PrimitiveTabsTrigger
             key={item}
             value={item}
             className={[
-              'inline-flex items-center rounded-lg border px-4 py-2 text-sm font-medium text-nowrap transition-colors',
+              'inline-flex items-center border-b-2 px-2 py-2.5 text-sm font-medium text-nowrap transition-colors',
               item === selectedValue
-                ? 'border-transparent bg-fd-primary/10 text-fd-primary'
-                : 'border-transparent text-fd-muted-foreground hover:bg-fd-accent/50 hover:text-fd-accent-foreground/80',
+                ? 'border-fd-primary text-fd-foreground'
+                : 'border-transparent text-fd-muted-foreground hover:text-fd-foreground',
             ].join(' ')}
             style={{ cursor: 'pointer' }}
           >
@@ -75,7 +78,7 @@ export function ContentTab({ children, className, ...props }: ContentTabProps) {
     <PrimitiveTabsContent
       {...props}
       className={[
-        'prose-no-margin rounded-xl border border-fd-border bg-transparent p-4 outline-none data-[state=inactive]:hidden',
+        'prose-no-margin p-4 outline-none data-[state=inactive]:hidden',
         typeof className === 'string' ? className : undefined,
       ]
         .filter(Boolean)

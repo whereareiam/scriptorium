@@ -5,6 +5,7 @@ export function resolveProjectPaths(projectRoot: string) {
     projectRoot,
     docsContentDir: path.join(projectRoot, 'docs', 'content'),
     docsAssetsDir: path.join(projectRoot, 'docs', 'assets'),
+    docsComponentsDir: path.join(projectRoot, 'docs', 'components'),
     docsI18nDir: path.join(projectRoot, 'docs', 'i18n'),
     configPath: path.join(projectRoot, 'scriptorium.project.json'),
   }
@@ -22,6 +23,7 @@ export function getContractPrefixes(projectRoot: string, repoRoot: string) {
   return {
     contentPrefix: `${prefix}docs/content/`,
     assetsPrefix: `${prefix}docs/assets/`,
+    componentsPrefix: `${prefix}docs/components/`,
     i18nPrefix: `${prefix}docs/i18n/`,
     configPath: `${prefix}scriptorium.project.json`,
   }
@@ -34,6 +36,7 @@ export function isBundledContractPath(relativePath: string, projectRoot = '.', r
   return (
     normalized.startsWith(prefixes.contentPrefix) ||
     normalized.startsWith(prefixes.assetsPrefix) ||
+    normalized.startsWith(prefixes.componentsPrefix) ||
     normalized.startsWith(prefixes.i18nPrefix) ||
     normalized === prefixes.configPath
   )

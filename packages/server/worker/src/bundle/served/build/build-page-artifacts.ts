@@ -123,8 +123,11 @@ function toServedRenderer(
 
 function resolveSidebarTree(source: SearchSource, refSlug: string) {
   const tree = source.getPageTree() as any
+  const metaPath = `${refSlug}/meta.json`
+  // Fumadocs gives `$ref` as the meta path, or since 16.17 as `{ folder, meta }`.
   const folder = tree.children.find(
-    (node: any) => node.type === 'folder' && node.$ref === `${refSlug}/meta.json`,
+    (node: any) =>
+      node.type === 'folder' && (node.$ref === metaPath || node.$ref?.meta === metaPath),
   ) as any
   if (!folder) {
     return tree
@@ -162,31 +165,47 @@ function serializeNode(node: any): ServedPageTreeNode {
 function serializePage(node: any): ServedPageTreePage {
   return {
     type: 'page',
+    ...toId(node.$id),
     name: toText(node.name),
     url: node.url,
     external: node.external,
     description: toOptionalText(node.description),
+    ...toIcon(node.icon),
   }
 }
 
 function serializeSeparator(node: any): ServedPageTreeSeparator {
   return {
     type: 'separator',
+    ...toId(node.$id),
     name: toOptionalText(node.name),
+    ...toIcon(node.icon),
   }
 }
 
 function serializeFolder(node: any): ServedPageTreeFolder {
   return {
     type: 'folder',
+    ...toId(node.$id),
     name: toText(node.name),
     description: toOptionalText(node.description),
+    ...toIcon(node.icon),
     root: node.root,
     defaultOpen: node.defaultOpen,
     collapsible: node.collapsible,
     index: node.index ? serializePage(node.index) : undefined,
     children: (node.children ?? []).map(serializeNode),
   }
+}
+
+/** Fumadocs matches sidebar sections to their menu entries by id. */
+function toId(value: unknown) {
+  return typeof value === 'string' ? { $id: value } : {}
+}
+
+/** The name of a Lucide icon from meta.json or frontmatter, such as `BookOpen` or `book-open`. */
+function toIcon(value: unknown) {
+  return typeof value === 'string' && value.trim() !== '' ? { icon: value.trim() } : {}
 }
 
 function toText(value: unknown) {

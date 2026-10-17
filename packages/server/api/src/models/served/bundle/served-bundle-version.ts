@@ -9,5 +9,7 @@ export interface ServedBundleVersion {
   pageTreePath: string
   pageArtifactsDir: string
   searchIndexPath: string
+  /** The prepared `docs/components` of the version, shared by all of its languages. */
+  componentsPath?: string
   translations?: ServedBundleTranslation[]
 }

@@ -44,13 +44,29 @@ describe('buildPageArtifacts', () => {
             children: [
               {
                 type: 'folder',
-                $ref: 'dev/meta.json',
+                $ref: { folder: 'dev', meta: 'dev/meta.json' },
                 name: 'Development',
+                root: true,
                 children: [
                   {
                     type: 'page',
                     name: 'Home',
                     url: '/docs/dev',
+                  },
+                  {
+                    type: 'folder',
+                    $id: 'dev/server',
+                    name: 'Server admins',
+                    root: true,
+                    icon: 'Server',
+                    children: [
+                      {
+                        type: 'page',
+                        name: 'Install',
+                        url: '/docs/dev/server/install',
+                        icon: 'Download',
+                      },
+                    ],
                   },
                 ],
               },
@@ -65,6 +81,14 @@ describe('buildPageArtifacts', () => {
     expect(result.artifacts[0]?.entry.artifactPath).toBe('index.json')
     expect(result.artifacts[0]?.artifact.routeSegments).toEqual(['dev'])
     expect(result.tree.name).toBe('Development')
-    expect(result.tree.children).toHaveLength(1)
+    expect(result.tree.children).toHaveLength(2)
+    expect(result.tree.children[1]).toMatchObject({
+      type: 'folder',
+      $id: 'dev/server',
+      name: 'Server admins',
+      root: true,
+      icon: 'Server',
+      children: [{ type: 'page', name: 'Install', icon: 'Download' }],
+    })
   })
 })

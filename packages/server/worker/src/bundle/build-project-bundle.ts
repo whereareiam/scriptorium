@@ -27,6 +27,8 @@ export interface StagedBundle {
     slug: string
     kind: 'branch' | 'tag'
     contentDir: string
+    /** The version's `docs/components`, absent when it ships no project components. */
+    componentsDir?: string
     translations: StagedTranslation[]
   }>
 }
@@ -137,7 +139,8 @@ async function exportWorkingTreeVersion(
   languages: string[],
 ) {
   const versionRoot = path.join(outputDir, 'versions', versionName)
-  const { docsAssetsDir, docsContentDir, docsI18nDir } = resolveProjectPaths(projectRoot)
+  const { docsAssetsDir, docsComponentsDir, docsContentDir, docsI18nDir } =
+    resolveProjectPaths(projectRoot)
 
   await mkdir(versionRoot, { recursive: true })
   const bundledContentDir = path.join(versionRoot, 'content')
@@ -153,6 +156,10 @@ async function exportWorkingTreeVersion(
     await cp(docsI18nDir, path.join(versionRoot, 'i18n'), { recursive: true })
   }
 
+  if (await isDirectory(docsComponentsDir)) {
+    await cp(docsComponentsDir, path.join(versionRoot, 'components'), { recursive: true })
+  }
+
   const translations = await prepareVersionContent(versionRoot, bundledContentDir, languages)
 
   return {
@@ -160,6 +167,7 @@ async function exportWorkingTreeVersion(
     slug: toRefSlug(versionName),
     kind: 'branch',
     contentDir: path.join(versionRoot, 'content'),
+    ...(await resolveComponentsDir(versionRoot)),
     translations,
   } satisfies StagedBundle['versions'][number]
 }
@@ -197,6 +205,12 @@ async function exportVersion(
       destination = path.join(bundledContentDir, filePath.slice(prefixes.contentPrefix.length))
     } else if (filePath.startsWith(prefixes.assetsPrefix)) {
       destination = path.join(versionRoot, 'assets', filePath.slice(prefixes.assetsPrefix.length))
+    } else if (filePath.startsWith(prefixes.componentsPrefix)) {
+      destination = path.join(
+        versionRoot,
+        'components',
+        filePath.slice(prefixes.componentsPrefix.length),
+      )
     } else if (filePath.startsWith(prefixes.i18nPrefix)) {
       destination = path.join(versionRoot, 'i18n', filePath.slice(prefixes.i18nPrefix.length))
     }
@@ -213,6 +227,7 @@ async function exportVersion(
     slug: toRefSlug(ref.name),
     kind: ref.kind,
     contentDir: bundledContentDir,
+    ...(await resolveComponentsDir(versionRoot)),
     translations,
   } satisfies StagedBundle['versions'][number]
 }
@@ -266,6 +281,11 @@ async function prepareVersionContent(versionRoot: string, contentDir: string, la
   }
 
   return translations
+}
+
+async function resolveComponentsDir(versionRoot: string) {
+  const componentsDir = path.join(versionRoot, 'components')
+  return (await isDirectory(componentsDir)) ? { componentsDir } : {}
 }
 
 async function isDirectory(dirPath: string) {
