@@ -2,6 +2,6 @@
 version: 1.2.0
 ---
 
-# Scriptorium 1.2.0 - Translated Docs
+# Scriptorium 1.2.0 - Translated Docs and Project Components
 
-Projects can publish their documentation in more languages from `docs/i18n/<language>/`, with a language menu, translated search, and notes on pages whose translation is missing or outdated. Search now finds the text of pages and tables in every language, and switching versions keeps you on the page you are reading.
+Projects can publish their docs in more languages and ship their own MDX components. Sidebars gain sections and icons, and switching versions keeps your page.
