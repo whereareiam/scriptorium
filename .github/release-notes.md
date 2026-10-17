@@ -1,7 +1,7 @@
 ---
-version: 1.2.0
+version: 1.2.1
 ---
 
-# Scriptorium 1.2.0 - Translated Docs and Project Components
+# Scriptorium 1.2.1 - Start in a Section
 
-Projects can publish their docs in more languages and ship their own MDX components. Sidebars gain sections and icons, and switching versions keeps your page.
+A version without a top-level index page now opens the first page of its first section instead of a 404.

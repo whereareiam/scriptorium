@@ -61,3 +61,4 @@ export {
   type ProjectComponent,
   type ProjectComponentModule,
 } from './components/project-components'
+export { findStartPageUrl } from './page-tree-utils'
