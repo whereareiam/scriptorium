@@ -63,6 +63,10 @@ The top of the sidebar holds two menus:
   A section's `description` is shown under its title in the menu. On a page outside every section,
   such as the start page, the sidebar shows the whole tree and the menu offers the sections.
 
+  Without a top-level `docs/content/index.mdx`, a version opens the first page of its first section
+  (or its first page, without sections), so readers start inside a section. With one, it opens that
+  page as before.
+
 Folders, sections and pages can carry a [Lucide](https://lucide.dev/icons) icon in the sidebar:
 `"icon": "BookOpen"` in a folder's `meta.json`, or `icon: BookOpen` in a page's frontmatter. The name
 may also be written in lowercase or kebab-case (`book-open`); an unknown name shows no icon.
